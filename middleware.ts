@@ -1,7 +1,10 @@
-// middleware.ts
-export { default } from "next-auth/middleware"
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
-export const config = { 
-  // Semua halaman di dalam dashboard akan diproteksi
-  matcher: ["/dashboard/:path*", "/inventory/:path*", "/menu/:path*"], 
+export function middleware(request: NextRequest) {
+  return NextResponse.next()
+}
+
+export const config = {
+  matcher: ['/dashboard/:path*'],
 }
