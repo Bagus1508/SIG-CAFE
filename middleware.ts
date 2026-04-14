@@ -1,33 +1,39 @@
-import { getToken } from "next-auth/jwt"
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
+import { getToken } from "next-auth/jwt";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 export async function middleware(req: NextRequest) {
-  // Ambil token/session dari browser
-  const session = await getToken({ 
-    req, 
-    secret: process.env.NEXTAUTH_SECRET 
-  })
+  const { pathname } = req.nextUrl;
 
-  // Jika mencoba akses dashboard tapi TIDAK ada session
-  if (!session) {
-    const url = req.nextUrl.clone()
-    url.pathname = "/login"
-    // Tambahkan callback agar setelah login bisa balik ke halaman tadi
-    url.searchParams.set("callbackUrl", req.nextUrl.pathname) 
-    return NextResponse.redirect(url)
+  // 1. BIARKAN request ke API Auth lewat (PENTING!)
+  // Tanpa ini, proses login akan tersangkut di middleware
+  if (pathname.startsWith("/api/auth")) {
+    return NextResponse.next();
   }
 
-  // Jika ada session, izinkan lanjut
-  return NextResponse.next()
+  // 2. Ambil token untuk cek status login
+  const token = await getToken({ 
+    req, 
+    secret: process.env.NEXTAUTH_SECRET,
+    secureCookie: process.env.NODE_ENV === "production"
+  });
+
+  // 3. PROTEKSI: Jika mau ke dashboard tapi belum login
+  if (pathname.startsWith("/dashboard") && !token) {
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("callbackUrl", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // 4. REDIRECT: Jika sudah login tapi mau akses halaman login lagi
+  if (pathname === "/login" && token) {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
+  }
+
+  return NextResponse.next();
 }
 
-// Tentukan halaman mana saja yang mau dikunci
 export const config = {
-  matcher: [
-    "/dashboard/:path*", 
-    "/inventory/:path*", 
-    "/cafes/:path*", 
-    "/statistics/:path*"
-  ],
+  // Pastikan matcher mencakup dashboard dan login
+  matcher: ["/dashboard/:path*", "/login", "/api/auth/:path*"],
 }
