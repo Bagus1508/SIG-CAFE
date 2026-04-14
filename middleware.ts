@@ -1,10 +1,17 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { withAuth } from "next-auth/middleware"
 
-export function middleware(request: NextRequest) {
-  return NextResponse.next()
-}
+export default withAuth(
+  function middleware(req) {
+    // Anda bisa menambahkan logika custom di sini jika perlu
+  },
+  {
+    pages: {
+      signIn: "/login", // Jika belum login, tendang ke sini
+    },
+  }
+)
 
 export const config = {
-  matcher: ['/dashboard/:path*'],
+  // Lindungi semua route yang berawalan /dashboard
+  matcher: ["/dashboard/:path*"],
 }
