@@ -1,50 +1,59 @@
 "use client"
 import { signOut } from "next-auth/react"
-import { Home, ListChecks, Store, Users, BarChart3, LogOut, Menu } from "lucide-react" // npm install lucide-react
+import { Home, ListChecks, Store, Users, BarChart3, LogOut, Menu, PlusSquare } from "lucide-react"
 import { useState } from "react"
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(true)
 
   const menuItems = [
+    /* Admin */
     { icon: <Home size={20} />, label: "Dashboard", href: "/dashboard" },
     { icon: <BarChart3 size={20} />, label: "Statistik Sistem", href: "/dashboard/statistics" },
     { icon: <ListChecks size={20} />, label: "Daftar Pengajuan", href: "/dashboard/submissions" },
     { icon: <Store size={20} />, label: "Manajemen Cafe", href: "/dashboard/cafes" },
     { icon: <Users size={20} />, label: "Manajemen User", href: "/dashboard/users" },
+
+    /* Owner */
+    { icon: <Home size={20} />, label: "Dashboard", href: "/dashboard/owners" },
+    { icon: <PlusSquare size={20} />, label: "Pengajuan Lokasi", href: "/dashboard/submissions/new" },
   ]
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* SIDEBAR */}
-      <aside className={`${isOpen ? "w-64" : "w-20"} bg-slate-900 text-white transition-all duration-300 flex flex-col`}>
-        <div className="p-6 text-xl font-bold border-b border-slate-800 flex items-center gap-4">
+    // Gunakan h-screen dan overflow-hidden pada pembungkus utama
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      
+      {/* SIDEBAR - Sekarang menggunakan h-full agar tetap tinggi penuh */}
+      <aside className={`${isOpen ? "w-64" : "w-20"} bg-slate-900 text-white transition-all duration-300 flex flex-col h-full shrink-0`}>
+        <div className="p-6 text-xl font-bold border-b border-slate-800 flex items-center gap-4 shrink-0">
           <div className="bg-blue-500 p-2 rounded-lg"><ListChecks size={24} /></div>
-          {isOpen && <span>SIG CAFE</span>}
+          {isOpen && <span className="truncate">SIG CAFE</span>}
         </div>
 
-        <nav className="flex-1 mt-6 px-4 space-y-2">
+        {/* Area Navigasi Sidebar yang bisa scroll sendiri jika menu kepanjangan */}
+        <nav className="flex-1 mt-6 px-4 space-y-2 overflow-y-auto custom-scrollbar">
           {menuItems.map((item, index) => (
-            <a key={index} href={item.href} className="flex items-center gap-4 p-3 hover:bg-slate-800 rounded-lg transition-colors text-slate-300 hover:text-white">
-              {item.icon}
+            <a key={index} href={item.href} className="flex items-center gap-4 p-3 hover:bg-slate-800 rounded-lg transition-colors text-slate-300 hover:text-white whitespace-nowrap">
+              <div className="shrink-0">{item.icon}</div>
               {isOpen && <span>{item.label}</span>}
             </a>
           ))}
         </nav>
 
         <button 
-        onClick={() => signOut({ callbackUrl: "/login" })} // Tambahkan ini
-        className="m-4 flex items-center gap-4 p-3 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all"
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className="m-4 flex items-center gap-4 p-3 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all shrink-0"
         >
-        <LogOut size={20} />
-        {isOpen && <span>Keluar</span>}
+          <LogOut size={20} className="shrink-0" />
+          {isOpen && <span>Keluar</span>}
         </button>
       </aside>
 
-      {/* MAIN CONTENT */}
-      <main className="flex-1 flex flex-col">
-        {/* HEADER */}
-        <header className="h-16 bg-white border-b flex items-center justify-between px-8">
+      {/* MAIN CONTENT - Menggunakan flex-col dan overflow-hidden agar area bawah saja yang scroll */}
+      <main className="flex-1 flex flex-col min-w-0">
+        
+        {/* HEADER - Paten di atas */}
+        <header className="h-16 bg-white border-b flex items-center justify-between px-8 shrink-0">
           <button onClick={() => setIsOpen(!isOpen)} className="text-gray-500 hover:text-black">
             <Menu />
           </button>
@@ -54,9 +63,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        {/* CONTENT AREA */}
-        <div className="p-8">
-          {children}
+        {/* CONTENT AREA - Sekarang area ini saja yang bisa scroll ke bawah */}
+        <div className="flex-1 overflow-y-auto p-8 bg-gray-50">
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
         </div>
       </main>
     </div>
