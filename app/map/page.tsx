@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import 'leaflet/dist/leaflet.css'
 import { Search, Navigation, MapPin, ExternalLink } from 'lucide-react'
-import { keywordMap } from '@/lib/keywordMapping'
+import { getKeywordMappings } from '../dashboard/actions'
 import { fetchCafes } from '@/lib/foursquare'
 
 const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false })
@@ -34,8 +34,11 @@ export default function Page() {
   const [query, setQuery] = useState("")
   const [userIcon, setUserIcon] = useState<any>(null)
   const [cafeIcon, setCafeIcon] = useState<any>(null)
+  const [keywordMapping, setKeywordMapping] = useState<Record<string, string>>({})
 
   useEffect(() => {
+    getKeywordMappings().then(setKeywordMapping)
+    
     import('leaflet').then(L => {
       setUserIcon(new L.Icon({
         iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
@@ -64,12 +67,7 @@ export default function Page() {
   }
 
   const handleSearch = async () => {
-    // if (!userLocation) {
-    //   alert("Klik lokasi dulu")
-    //   return
-    // }
-
-    const mapped = keywordMap[query.toLowerCase()] || query || "coffee shop"
+    const mapped = keywordMapping[query.toLowerCase()] || query || "coffee shop"
 
     const surabayaSouthCenters = [
       [-7.2915, 112.7348], // Wonokromo
@@ -117,16 +115,7 @@ export default function Page() {
     }
   }
 
-  const keywordOptions = [
-    "cozy",
-    "wifi",
-    "outdoor",
-    "belajar",
-    "murah",
-    "nongkrong",
-    "meeting",
-    "estetik"
-  ]
+  const keywordOptions = Object.keys(keywordMapping).slice(0, 8)
 
   return (
     <div className="h-screen overflow-hidden bg-slate-100 lg:grid lg:grid-cols-12 gap-4 p-3 lg:p-4 flex flex-col">

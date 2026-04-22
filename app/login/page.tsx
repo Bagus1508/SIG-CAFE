@@ -2,6 +2,7 @@
 import { signIn } from "next-auth/react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { Coffee, Lock, User, Loader2 } from "lucide-react"
 
 export default function LoginPage() {
@@ -94,6 +95,15 @@ export default function LoginPage() {
               {loading ? <Loader2 className="animate-spin" size={20} /> : "Masuk Sekarang"}
             </button>
           </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-slate-500 text-sm">
+              Belum punya akun?{" "}
+              <Link href="/register" className="text-blue-600 font-bold hover:underline">
+                Daftar Sebagai Owner
+              </Link>
+            </p>
+          </div>
         </div>
 
         <p className="text-center mt-8 text-slate-400 text-sm">
