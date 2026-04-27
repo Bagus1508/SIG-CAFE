@@ -144,6 +144,11 @@ export default function NewSubmissionPage() {
   }
 
   const toggleFacility = (facility: string) => {
+    const current = formData.facilities ? formData.facilities.split(", ") : []
+    const updated = current.includes(facility)
+      ? current.filter(f => f !== facility)
+      : [...current, facility]
+
     setFormData(prev => ({ ...prev, facilities: updated.join(", ") }))
   }
 
@@ -171,6 +176,7 @@ export default function NewSubmissionPage() {
     e.preventDefault()
     setLoading(true)
 
+    let res
     const payload = {
       ...formData,
       openingHours: `${formData.openTime} - ${formData.closeTime}`,
@@ -407,14 +413,14 @@ export default function NewSubmissionPage() {
                         <input
                           type="text"
                           placeholder="Nama Menu"
-                          className="flex-1 px-4 py-3 rounded-xl border border-slate-200 focus:border-orange-500 outline-none transition-all text-sm"
+                          className="flex-1 px-4 py-3 rounded-xl border border-slate-200 focus:border-orange-500 outline-none transition-all text-sm text-gray-700"
                           value={item.name}
                           onChange={(e) => updateMenuItem(index, 'name', e.target.value)}
                         />
                         <input
                           type="text"
                           placeholder="Harga (Rp)"
-                          className="w-32 px-4 py-3 rounded-xl border border-slate-200 focus:border-orange-500 outline-none transition-all text-sm"
+                          className="w-32 px-4 py-3 rounded-xl border border-slate-200 focus:border-orange-500 outline-none transition-all text-sm text-gray-700"
                           value={item.price}
                           onChange={(e) => updateMenuItem(index, 'price', e.target.value)}
                         />
@@ -450,8 +456,8 @@ export default function NewSubmissionPage() {
                     type="button"
                     onClick={() => toggleFacility(facility)}
                     className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${isSelected
-                        ? 'bg-purple-50 border-purple-200 text-purple-700 font-bold'
-                        : 'bg-white border-slate-100 text-slate-500 hover:border-slate-200'
+                      ? 'bg-purple-50 border-purple-200 text-purple-700 font-bold'
+                      : 'bg-white border-slate-100 text-slate-500 hover:border-slate-200'
                       }`}
                   >
                     <span className="text-sm">{facility}</span>

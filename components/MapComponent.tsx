@@ -541,9 +541,9 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
 
           {/* Floating Detail Card - persis struktur map/page.tsx */}
           {selectedCafe && (
-            <div className="absolute bottom-3 left-3 right-3 sm:left-auto sm:right-4 sm:top-4 sm:bottom-auto sm:w-80 z-[1000] bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-slate-100 overflow-hidden">
+            <div className="absolute bottom-3 left-3 right-3 sm:left-auto sm:right-4 sm:top-4 sm:bottom-auto sm:w-80 z-[1000] bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[85vh] sm:max-h-[calc(100vh-2rem)]">
 
-              <div className={`h-48 flex items-center justify-center text-white text-4xl relative ${selectedCafe.isDb ? 'bg-orange-500' : 'bg-blue-600'}`}>
+              <div className={`h-48 shrink-0 flex items-center justify-center text-white text-4xl relative ${selectedCafe.isDb ? 'bg-orange-500' : 'bg-blue-600'}`}>
                 {selectedCafe.images && selectedCafe.images.length > 0 ? (
                   <div className="w-full h-full flex overflow-x-auto snap-x scrollbar-hide">
                     {selectedCafe.images.map((img: any, i: number) => (
@@ -560,7 +560,7 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
                 )}
               </div>
 
-              <div className="p-4">
+              <div className="p-4 overflow-y-auto">
 
                 <div className="flex justify-between items-start">
                   <h2 className="font-bold text-lg text-slate-700 leading-tight">
@@ -584,44 +584,42 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
                   {selectedCafe.location?.formatted_address}
                 </p>
 
-                {selectedCafe.isDb && (
-                  <div className="mt-4 space-y-3">
-                    {selectedCafe.phone && (
-                      <div className="flex items-center gap-3 text-sm text-slate-600">
-                        <Phone size={14} className="text-blue-500" />
-                        <span>{selectedCafe.phone}</span>
-                      </div>
-                    )}
-                    {selectedCafe.openingHours && (
-                      <div className="flex items-center gap-3 text-sm text-slate-600">
-                        <Clock size={14} className="text-blue-500" />
-                        <span>{selectedCafe.openingHours}</span>
-                      </div>
-                    )}
-                    {selectedCafe.ambiance && (
-                      <div className="flex items-center gap-3 text-sm text-slate-600">
-                        <Sparkles size={14} className="text-orange-500" />
-                        <span>{selectedCafe.ambiance}</span>
-                      </div>
-                    )}
+                <div className="mt-4 space-y-3">
+                  <div className="flex items-center gap-3 text-sm text-slate-600">
+                    <Phone size={14} className="text-blue-500" />
+                    <span className={!selectedCafe.phone ? 'text-slate-400 italic' : ''}>
+                      {selectedCafe.phone || 'Belum ada informasi kontak'}
+                    </span>
                   </div>
-                )}
-
-                {selectedCafe.isDb && selectedCafe.description && (
-                  <div className="mt-4 pt-4 border-t border-slate-100">
-                    <div className="flex items-center gap-2 mb-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      <Info size={12} /> Tentang Café
-                    </div>
-                    <p className="text-sm text-slate-600 italic">"{selectedCafe.description}"</p>
+                  <div className="flex items-center gap-3 text-sm text-slate-600">
+                    <Clock size={14} className="text-blue-500" />
+                    <span className={!selectedCafe.openingHours ? 'text-slate-400 italic' : ''}>
+                      {selectedCafe.openingHours || 'Belum ada informasi jam operasional'}
+                    </span>
                   </div>
-                )}
+                  <div className="flex items-center gap-3 text-sm text-slate-600">
+                    <Sparkles size={14} className="text-orange-500" />
+                    <span className={!selectedCafe.ambiance ? 'text-slate-400 italic' : ''}>
+                      {selectedCafe.ambiance || 'Belum ada informasi suasana'}
+                    </span>
+                  </div>
+                </div>
 
-                {/* Fasilitas Cafe (khusus DB) */}
-                {selectedCafe.isDb && selectedCafe.facilities && (
-                  <div className="mt-4 pt-4 border-t border-slate-100">
-                    <div className="flex items-center gap-2 mb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      <Wifi size={12} /> Fasilitas Tersedia
-                    </div>
+                <div className="mt-4 pt-4 border-t border-slate-100">
+                  <div className="flex items-center gap-2 mb-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <Info size={12} /> Tentang Café
+                  </div>
+                  <p className={`text-sm ${selectedCafe.description ? 'text-slate-600 italic' : 'text-slate-400 italic'}`}>
+                    {selectedCafe.description ? `"${selectedCafe.description}"` : 'Belum ada deskripsi untuk café ini.'}
+                  </p>
+                </div>
+
+                {/* Fasilitas Cafe */}
+                <div className="mt-4 pt-4 border-t border-slate-100">
+                  <div className="flex items-center gap-2 mb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <Wifi size={12} /> Fasilitas Tersedia
+                  </div>
+                  {selectedCafe.facilities ? (
                     <div className="flex flex-wrap gap-1.5">
                       {selectedCafe.facilities.split(", ").map((f: string) => (
                         <span key={f} className="px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-lg border border-blue-100">
@@ -629,17 +627,44 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
                         </span>
                       ))}
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <p className="text-sm text-slate-400 italic">Belum ada informasi fasilitas.</p>
+                  )}
+                </div>
 
-                {selectedCafe.isDb && selectedCafe.menuDescription && (
-                  <div className="mt-4 pt-4 border-t border-slate-100">
-                    <div className="flex items-center gap-2 mb-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      <Utensils size={12} /> Menu Unggulan
-                    </div>
-                    <p className="text-sm text-slate-600">{selectedCafe.menuDescription}</p>
+                {/* Menu */}
+                <div className="mt-4 pt-4 border-t border-slate-100">
+                  <div className="flex items-center gap-2 mb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <Utensils size={12} /> Menu Unggulan
                   </div>
-                )}
+                  {(() => {
+                    if (!selectedCafe.menuDescription) {
+                      return <p className="text-sm text-slate-400 italic">Belum ada informasi menu.</p>;
+                    }
+                    try {
+                      const items = JSON.parse(selectedCafe.menuDescription);
+                      if (Array.isArray(items) && items.length > 0) {
+                        return (
+                          <div className="flex flex-col gap-2">
+                            {items.map((item: any, i: number) => (
+                              <div key={i} className="flex justify-between items-center bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                                <span className="text-sm font-medium text-slate-700">{item.name}</span>
+                                {item.price && (
+                                  <span className="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded-md">
+                                    {item.price.toLowerCase().includes('rp') ? item.price : `Rp ${item.price}`}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      }
+                    } catch (e) {
+                      // Fallback if not valid JSON
+                    }
+                    return <p className="text-sm text-slate-600 leading-relaxed">{selectedCafe.menuDescription}</p>;
+                  })()}
+                </div>
 
                 <div className="mt-3 flex justify-between text-xs text-slate-400">
                   <span>Distance</span>
