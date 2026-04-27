@@ -35,6 +35,17 @@ export async function getKeywordMappings() {
   }
 }
 
+export async function getPublicFacilities() {
+  try {
+    return await (prisma as any).facility.findMany({
+      orderBy: { name: 'asc' }
+    })
+  } catch (error) {
+    console.error("Public Facilities Fetch Error:", error)
+    return []
+  }
+}
+
 export async function getDashboardStats() {
   try {
     const session = await getServerSession(authOptions)
@@ -73,14 +84,14 @@ export async function getDashboardStats() {
       const cafeIds = myCafes.map(c => c.id)
 
       const [clicks, views, routes, searches] = await Promise.all([
-        prisma.interaction.count({ where: { cafeId: { in: cafeIds }, type: "click" } }),
-        prisma.interaction.count({ where: { cafeId: { in: cafeIds }, type: "view" } }),
-        prisma.interaction.count({ where: { cafeId: { in: cafeIds }, type: "route" } }),
-        prisma.interaction.count({ where: { cafeId: { in: cafeIds }, type: "search" } }),
+        (prisma as any).interaction.count({ where: { cafeId: { in: cafeIds }, type: "click" } }),
+        (prisma as any).interaction.count({ where: { cafeId: { in: cafeIds }, type: "view" } }),
+        (prisma as any).interaction.count({ where: { cafeId: { in: cafeIds }, type: "route" } }),
+        (prisma as any).interaction.count({ where: { cafeId: { in: cafeIds }, type: "search" } }),
       ])
 
-      const popularity = await Promise.all(myCafes.map(async (cafe) => {
-        const count = await prisma.interaction.count({ where: { cafeId: cafe.id } })
+      const popularity = await Promise.all(myCafes.map(async (cafe: any) => {
+        const count = await (prisma as any).interaction.count({ where: { cafeId: cafe.id } })
         return { name: cafe.cafeName, clicks: count }
       }))
 
@@ -88,7 +99,7 @@ export async function getDashboardStats() {
         myActive: myCafes.length,
         myLatest: myCafes,
         analytics: { clicks, views, routes, searches },
-        popularity: popularity.sort((a,b) => b.clicks - a.clicks)
+        popularity: popularity.sort((a: any,b: any) => b.clicks - a.clicks)
       }
     }
   } catch (error) {

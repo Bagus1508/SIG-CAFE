@@ -50,7 +50,10 @@ export async function createSubmission(data: any) {
     const userId = parseInt((session.user as any).id)
     if (isNaN(userId)) throw new Error("Invalid User ID")
 
-    const { cafeName, capacity, address, latitude, longitude, images } = data
+    const { 
+      cafeName, capacity, address, latitude, longitude, images, facilities,
+      phone, openingHours, ambiance, menuDescription, description 
+    } = data
     
     const count = await prisma.submission.count()
     const reqNumber = `REQ-${(count + 1).toString().padStart(3, '0')}`
@@ -63,12 +66,18 @@ export async function createSubmission(data: any) {
         address,
         latitude,
         longitude,
+        facilities,
+        phone,
+        openingHours,
+        ambiance,
+        menuDescription,
+        description,
         status: "Pending",
         ownerId: userId,
         images: {
           create: (images || []).map((url: string) => ({ url }))
         }
-      }
+      } as any
     })
 
     revalidatePath("/dashboard/submissions")
@@ -81,7 +90,10 @@ export async function createSubmission(data: any) {
 
 export async function updateSubmission(id: number, data: any) {
   try {
-    const { cafeName, capacity, address, latitude, longitude, status, images } = data
+    const { 
+      cafeName, capacity, address, latitude, longitude, status, images, facilities,
+      phone, openingHours, ambiance, menuDescription, description 
+    } = data
     
     await prisma.submission.update({
       where: { id },
@@ -91,12 +103,18 @@ export async function updateSubmission(id: number, data: any) {
         address,
         latitude,
         longitude,
+        facilities,
+        phone,
+        openingHours,
+        ambiance,
+        menuDescription,
+        description,
         status,
         images: {
           deleteMany: {},
           create: (images || []).map((url: string) => ({ url }))
         }
-      }
+      } as any
     })
 
     revalidatePath("/dashboard/submissions")

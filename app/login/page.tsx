@@ -1,5 +1,5 @@
 "use client"
-import { signIn } from "next-auth/react"
+import { signIn, getSession } from "next-auth/react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -27,8 +27,15 @@ export default function LoginPage() {
       setError("Username atau password salah!")
       setLoading(false)
     } else {
-      // LANGSUNG ARAHKAN KE DASHBOARD
-      router.push("/dashboard")
+      // Fetch session to determine role-based redirect
+      const session = await getSession()
+      const role = (session?.user as any)?.role
+
+      if (role === "owner_cafe") {
+        router.push("/dashboard/owners")
+      } else {
+        router.push("/dashboard")
+      }
       router.refresh()
     }
   }

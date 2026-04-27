@@ -36,7 +36,12 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
-  // 3. REDIRECT: Jika sudah login tapi mau ke /login
+  // 3. REDIRECT: Owner yang akses /dashboard langsung ke /dashboard/owners
+  if (pathname === "/dashboard" && role === "owner_cafe") {
+    return NextResponse.redirect(new URL("/dashboard/owners", req.url));
+  }
+
+  // 4. REDIRECT: Jika sudah login tapi mau ke /login
   if (pathname === "/login" && token) {
     return NextResponse.next(); // Biarkan login page handle (usually redirects to /dashboard)
   }

@@ -26,6 +26,12 @@ model Submission {
   address   String
   latitude  String
   longitude String
+  facilities String?  @db.Text
+  phone      String?
+  openingHours String?
+  ambiance     String?
+  menuDescription String? @db.Text
+  description     String? @db.Text
   status       String   @default("Pending")
   revisionNote String?  @db.Text
   ownerId      Int
@@ -55,4 +61,9 @@ model KeywordMapping {
   id    Int    @id @default(autoincrement())
   key   String @unique
   value String
+}
+
+model Facility {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
 }

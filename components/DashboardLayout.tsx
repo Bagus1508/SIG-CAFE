@@ -1,6 +1,6 @@
 "use client"
 import { signOut, useSession } from "next-auth/react"
-import { Home, ListChecks, Store, Users, BarChart3, LogOut, Menu, PlusSquare, CheckSquare, Tag } from "lucide-react"
+import { Home, ListChecks, Store, Users, BarChart3, LogOut, Menu, PlusSquare, CheckSquare, Tag, Wifi } from "lucide-react"
 import { useState } from "react"
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -17,6 +17,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { icon: <Store size={20} />, label: "Manajemen Cafe", href: "/dashboard/cafes" },
     { icon: <Users size={20} />, label: "Manajemen User", href: "/dashboard/users" },
     { icon: <Tag size={20} />, label: "Manajemen Keyword", href: "/dashboard/keywords" },
+    { icon: <Wifi size={20} />, label: "Manajemen Fasilitas", href: "/dashboard/facilities" },
   ]
 
   const ownerMenu = [

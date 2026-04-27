@@ -44,7 +44,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-3">
             {session ? (
               <Link 
-                href="/dashboard"
+                href={(session?.user as any)?.role === "owner_cafe" ? "/dashboard/owners" : "/dashboard"}
                 className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-6 py-3 rounded-2xl font-bold transition-all shadow-xl shadow-slate-900/10"
               >
                 <LayoutDashboard size={18} /> Dashboard
@@ -100,7 +100,7 @@ export default function LandingPage() {
                 <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">Menyiapkan Peta SIG...</p>
               </div>
             ) : (
-              <div className="w-full h-[700px]">
+              <div className="w-full h-[750px] relative group overflow-hidden rounded-[3rem] shadow-2xl border border-slate-100">
                 <MapComponent dbCafes={dbCafes} keywordMapping={keywordMapping} />
               </div>
             )}

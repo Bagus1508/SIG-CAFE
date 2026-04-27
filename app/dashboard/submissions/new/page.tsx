@@ -13,10 +13,20 @@ import {
   AlertCircle,
   XCircle,
   Loader2,
-  Trash2
+  Trash2,
+  Wifi,
+  Check,
+  Phone,
+  Clock,
+  Sparkles,
+  Utensils,
+  BookOpen,
+  Plus,
+  Trash
 } from "lucide-react"
 import Link from "next/link"
 import { createSubmission, updateSubmission, cancelSubmission, getSubmissionById } from "../actions"
+import { getPublicFacilities } from "@/app/dashboard/actions"
 import { useRouter, useSearchParams } from "next/navigation"
 import ConfirmModal from "@/components/ConfirmModal"
 
@@ -35,8 +45,16 @@ export default function NewSubmissionPage() {
     address: "",
     latitude: "",
     longitude: "",
-    images: [] as string[]
+    images: [] as string[],
+    facilities: "",
+    phone: "",
+    openTime: "08:00",
+    closeTime: "22:00",
+    ambiance: "",
+    menuItems: [] as { name: string, price: string }[],
+    description: ""
   })
+  const [availableFacilities, setAvailableFacilities] = useState<any[]>([])
 
   // Load data if editing
   useEffect(() => {
@@ -50,13 +68,26 @@ export default function NewSubmissionPage() {
             address: data.address,
             latitude: data.latitude,
             longitude: data.longitude,
-            images: data.images.map((img: any) => img.url)
+            images: data.images.map((img: any) => img.url),
+            facilities: (data as any).facilities || "",
+            phone: (data as any).phone || "",
+            openTime: ((data as any).openingHours || "08:00 - 22:00").split(" - ")[0] || "08:00",
+            closeTime: ((data as any).openingHours || "08:00 - 22:00").split(" - ")[1] || "22:00",
+            ambiance: (data as any).ambiance || "",
+            menuItems: JSON.parse((data as any).menuDescription || "[]"),
+            description: (data as any).description || ""
           })
         }
         setLoading(false)
       })
     }
   }, [editId])
+
+  useEffect(() => {
+    getPublicFacilities().then(data => {
+      setAvailableFacilities(data)
+    })
+  }, [])
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -112,18 +143,47 @@ export default function NewSubmissionPage() {
     }))
   }
 
+  const toggleFacility = (facility: string) => {
+    setFormData(prev => ({ ...prev, facilities: updated.join(", ") }))
+  }
+
+  const addMenuItem = () => {
+    setFormData(prev => ({
+      ...prev,
+      menuItems: [...prev.menuItems, { name: "", price: "" }]
+    }))
+  }
+
+  const updateMenuItem = (index: number, field: 'name' | 'price', value: string) => {
+    const updated = [...formData.menuItems]
+    updated[index][field] = value
+    setFormData(prev => ({ ...prev, menuItems: updated }))
+  }
+
+  const removeMenuItem = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      menuItems: prev.menuItems.filter((_, i) => i !== index)
+    }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
-    let res
+    const payload = {
+      ...formData,
+      openingHours: `${formData.openTime} - ${formData.closeTime}`,
+      menuDescription: JSON.stringify(formData.menuItems)
+    }
+
     if (editId) {
       // If status is Revisi, when updating we reset status to Pending
-      const payload = { ...formData, status: "Pending" }
-      res = await updateSubmission(parseInt(editId), payload)
+      const finalPayload = { ...payload, status: "Pending" }
+      res = await updateSubmission(parseInt(editId), finalPayload)
       if (res.success) setSuccessState("updated")
     } else {
-      res = await createSubmission(formData)
+      res = await createSubmission(payload)
       if (res.success) setSuccessState("created")
     }
 
@@ -248,6 +308,157 @@ export default function NewSubmissionPage() {
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 ></textarea>
               </div>
+            </div>
+          </div>
+
+          {/* Detail & Suasana */}
+          <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm">
+            <div className="flex items-center gap-3 mb-8 text-orange-600">
+              <div className="p-2 bg-orange-50 rounded-xl">
+                <Sparkles size={24} />
+              </div>
+              <h2 className="text-xl font-bold text-slate-800">Detail & Suasana</h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">No. Telepon / WhatsApp</label>
+                <div className="relative group">
+                  <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors" />
+                  <input
+                    type="text"
+                    placeholder="Contoh: 081234567890"
+                    className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-slate-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all text-gray-700 font-medium"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">Jam Operasional</label>
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-1">
+                    <Clock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="time"
+                      className="w-full pl-10 pr-4 py-3.5 rounded-2xl border border-slate-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all text-gray-700 font-medium"
+                      value={formData.openTime}
+                      onChange={(e) => setFormData({ ...formData, openTime: e.target.value })}
+                    />
+                  </div>
+                  <span className="text-slate-400 font-bold">s/d</span>
+                  <div className="relative flex-1">
+                    <Clock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="time"
+                      className="w-full pl-10 pr-4 py-3.5 rounded-2xl border border-slate-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all text-gray-700 font-medium"
+                      value={formData.closeTime}
+                      onChange={(e) => setFormData({ ...formData, closeTime: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">Suasana Café</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: Industrial, Minimalist, Cozy"
+                  className="w-full px-5 py-3.5 rounded-2xl border border-slate-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all text-gray-700 font-medium"
+                  value={formData.ambiance}
+                  onChange={(e) => setFormData({ ...formData, ambiance: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">Tentang Café</label>
+                <input
+                  type="text"
+                  placeholder="Singkat mengenai cafe Anda..."
+                  className="w-full px-5 py-3.5 rounded-2xl border border-slate-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all text-gray-700 font-medium"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                />
+              </div>
+
+              <div className="md:col-span-2 space-y-4 pt-4">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <Utensils size={18} className="text-orange-500" /> Menu Unggulan
+                  </label>
+                  <button
+                    type="button"
+                    onClick={addMenuItem}
+                    className="text-xs bg-orange-50 text-orange-600 px-3 py-1.5 rounded-lg font-bold hover:bg-orange-100 transition-colors flex items-center gap-1.5"
+                  >
+                    <Plus size={14} /> Tambah Menu
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {formData.menuItems.length === 0 ? (
+                    <div className="p-8 border-2 border-dashed border-slate-100 rounded-3xl text-center">
+                      <p className="text-sm text-slate-400 font-medium">Belum ada menu yang ditambahkan.</p>
+                    </div>
+                  ) : (
+                    formData.menuItems.map((item, index) => (
+                      <div key={index} className="flex gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <input
+                          type="text"
+                          placeholder="Nama Menu"
+                          className="flex-1 px-4 py-3 rounded-xl border border-slate-200 focus:border-orange-500 outline-none transition-all text-sm"
+                          value={item.name}
+                          onChange={(e) => updateMenuItem(index, 'name', e.target.value)}
+                        />
+                        <input
+                          type="text"
+                          placeholder="Harga (Rp)"
+                          className="w-32 px-4 py-3 rounded-xl border border-slate-200 focus:border-orange-500 outline-none transition-all text-sm"
+                          value={item.price}
+                          onChange={(e) => updateMenuItem(index, 'price', e.target.value)}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeMenuItem(index)}
+                          className="p-3 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                        >
+                          <Trash size={18} />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Fasilitas */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+            <div className="flex items-center gap-2 mb-6 text-purple-600">
+              <Wifi size={20} />
+              <h2 className="font-bold text-slate-800">Fasilitas Café</h2>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {availableFacilities.map((f) => {
+                const facility = f.name
+                const isSelected = formData.facilities.split(", ").includes(facility)
+                return (
+                  <button
+                    key={facility}
+                    type="button"
+                    onClick={() => toggleFacility(facility)}
+                    className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${isSelected
+                        ? 'bg-purple-50 border-purple-200 text-purple-700 font-bold'
+                        : 'bg-white border-slate-100 text-slate-500 hover:border-slate-200'
+                      }`}
+                  >
+                    <span className="text-sm">{facility}</span>
+                    {isSelected && <Check size={16} />}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
