@@ -32,6 +32,8 @@ model Submission {
   ambiance     String?
   menuDescription String? @db.Text
   description     String? @db.Text
+  kecamatan       String?
+  kelurahan       String?
   status       String   @default("Pending")
   revisionNote String?  @db.Text
   ownerId      Int

@@ -221,13 +221,13 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
 
         {/* Sidebar */}
         <div className={`transition-all duration-500 ease-in-out bg-white shadow-xl flex flex-col overflow-hidden relative z-[1000] ${showSidebar
-          ? 'lg:w-[400px] h-[40vh] lg:h-full opacity-100'
+          ? 'lg:w-[400px] h-[55vh] lg:h-full opacity-100'
           : 'w-0 h-0 lg:h-full lg:w-0 opacity-0 pointer-events-none'
           } ${isFullscreen ? 'lg:rounded-none' : 'rounded-3xl'}`}>
 
-          <div className="p-4 flex flex-col h-full min-w-[320px]">
+          <div className="p-3 lg:p-4 flex flex-col h-full min-w-[320px]">
 
-            <h1 className="text-xl font-bold text-slate-700 mb-4">
+            <h1 className="text-lg lg:text-xl font-bold text-slate-700 mb-2 lg:mb-4">
               Café Recommendation ☕
             </h1>
 
@@ -539,29 +539,51 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
             </MapContainer>
           </div>
 
-          {/* Floating Detail Card - persis struktur map/page.tsx */}
+          {/* Floating Detail Card - Bottom Sheet style on Mobile */}
           {selectedCafe && (
-            <div className="absolute bottom-3 left-3 right-3 sm:left-auto sm:right-4 sm:top-4 sm:bottom-auto sm:w-80 z-[1000] bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[85vh] sm:max-h-[calc(100vh-2rem)]">
+            <div className="fixed inset-x-0 bottom-0 sm:absolute sm:bottom-4 sm:left-auto sm:right-4 sm:w-80 z-[2000] sm:z-[1000] bg-white rounded-t-[32px] sm:rounded-2xl shadow-[0_-8px_30px_rgb(0,0,0,0.12)] sm:shadow-2xl border-t sm:border border-slate-100 overflow-hidden flex flex-col h-[75vh] sm:h-auto sm:max-h-[calc(100%-4rem)] transition-all duration-500 ease-out translate-y-0 animate-in slide-in-from-bottom">
 
-              <div className={`h-48 shrink-0 flex items-center justify-center text-white text-4xl relative ${selectedCafe.isDb ? 'bg-orange-500' : 'bg-blue-600'}`}>
+              {/* Mobile Handle Bar */}
+              <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mt-3 mb-1 sm:hidden shrink-0" />
+
+              {/* Close Button */}
+              <button
+                onClick={() => setSelectedCafe(null)}
+                className="absolute top-3 right-3 z-[1010] bg-black/30 hover:bg-black/50 text-white p-2 rounded-full backdrop-blur-md transition-all shadow-lg"
+              >
+                <X size={18} />
+              </button>
+
+              {/* Image Header */}
+              <div className={`h-48 sm:h-56 shrink-0 relative overflow-hidden m-4 rounded-md ${selectedCafe.isDb ? 'bg-gradient-to-br from-orange-400 to-orange-600' : 'bg-gradient-to-br from-blue-500 to-blue-700'}`}>
                 {selectedCafe.images && selectedCafe.images.length > 0 ? (
-                  <div className="w-full h-full flex overflow-x-auto snap-x scrollbar-hide">
-                    {selectedCafe.images.map((img: any, i: number) => (
-                      <img key={i} src={img.url} alt="" className="w-full h-full object-cover shrink-0 snap-center" />
-                    ))}
+                  <>
+                    <div className="w-full h-full flex overflow-x-auto snap-x scrollbar-hide">
+                      {selectedCafe.images.map((img: any, i: number) => (
+                        <img key={i} src={img.url} alt="" className="w-full h-full object-cover shrink-0 snap-center" />
+                      ))}
+                    </div>
+                    {/* Gradient Overlay for better UI depth */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none" />
+
                     {selectedCafe.images.length > 1 && (
-                      <div className="absolute bottom-2 right-2 bg-black/50 backdrop-blur-md px-2 py-1 rounded-md text-[10px] font-bold">
+                      <div className="absolute bottom-3 right-3 bg-white/20 backdrop-blur-md border border-white/30 px-2.5 py-1 rounded-full text-[10px] font-bold text-white shadow-sm">
                         1 / {selectedCafe.images.length}
                       </div>
                     )}
-                  </div>
+                  </>
                 ) : (
-                  "☕"
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+                    <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-3xl shadow-inner">
+                      ☕
+                    </div>
+                    <span className="text-[10px] font-bold text-white/70 uppercase tracking-widest">No Image Available</span>
+                  </div>
                 )}
               </div>
 
-              <div className="p-4 overflow-y-auto">
-
+              {/* Scrollable Body */}
+              <div className="p-4 overflow-y-auto flex-1 custom-scrollbar">
                 <div className="flex justify-between items-start">
                   <h2 className="font-bold text-lg text-slate-700 leading-tight">
                     {selectedCafe.name}
@@ -581,7 +603,7 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
 
                 <p className="text-sm flex gap-2 mt-3 text-slate-500">
                   <MapPin size={16} className="shrink-0 mt-[2px]" />
-                  {selectedCafe.location?.formatted_address}
+                  {selectedCafe.address || selectedCafe.location?.formatted_address}
                 </p>
 
                 <div className="mt-4 space-y-3">
@@ -597,27 +619,12 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
                       {selectedCafe.openingHours || 'Belum ada informasi jam operasional'}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-slate-600">
-                    <Sparkles size={14} className="text-orange-500" />
-                    <span className={!selectedCafe.ambiance ? 'text-slate-400 italic' : ''}>
-                      {selectedCafe.ambiance || 'Belum ada informasi suasana'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-slate-100">
-                  <div className="flex items-center gap-2 mb-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    <Info size={12} /> Tentang Café
-                  </div>
-                  <p className={`text-sm ${selectedCafe.description ? 'text-slate-600 italic' : 'text-slate-400 italic'}`}>
-                    {selectedCafe.description ? `"${selectedCafe.description}"` : 'Belum ada deskripsi untuk café ini.'}
-                  </p>
                 </div>
 
                 {/* Fasilitas Cafe */}
                 <div className="mt-4 pt-4 border-t border-slate-100">
                   <div className="flex items-center gap-2 mb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    <Wifi size={12} /> Fasilitas Tersedia
+                    <Wifi size={12} /> Fasilitas
                   </div>
                   {selectedCafe.facilities ? (
                     <div className="flex flex-wrap gap-1.5">
@@ -660,30 +667,32 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
                         );
                       }
                     } catch (e) {
-                      // Fallback if not valid JSON
+                      // Fallback
                     }
                     return <p className="text-sm text-slate-600 leading-relaxed">{selectedCafe.menuDescription}</p>;
                   })()}
                 </div>
 
-                <div className="mt-3 flex justify-between text-xs text-slate-400">
+                <div className="mt-3 flex justify-between text-[10px] text-slate-400 italic">
                   <span>Distance</span>
                   <span>{selectedCafe.distance > 0 ? `${selectedCafe.distance} meter` : '–'}</span>
                 </div>
+              </div>
 
+              {/* Fixed Footer */}
+              <div className="p-3 bg-white border-t border-slate-100 shrink-0">
                 <a
-                  href={`https://www.google.com/maps/dir/?api=1&destination=${selectedCafe.latitude},${selectedCafe.longitude}`}
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedCafe.name + ' ' + (selectedCafe.address || selectedCafe.location?.formatted_address || ''))}`}
                   target="_blank"
                   onClick={() => {
-                    // 3. 'route': catat klik navigasi hanya untuk cafe DB
                     if (selectedCafe.isDb && selectedCafe.id) {
                       recordInteraction(selectedCafe.id, 'route')
                     }
                   }}
-                  className="mt-4 flex gap-2 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl justify-center font-medium transition-all"
+                  className="w-full flex gap-2 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl justify-center font-bold text-sm shadow-lg shadow-blue-200 transition-all active:scale-95"
                 >
                   <ExternalLink size={16} />
-                  Navigasi
+                  Navigasi ke Lokasi
                 </a>
               </div>
             </div>

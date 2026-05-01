@@ -33,20 +33,38 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const menuItems = role === "admin" ? adminMenu : role === "owner_cafe" ? ownerMenu : userMenu
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen bg-gray-50 overflow-hidden relative">
       
+      {/* MOBILE OVERLAY */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-[1400] lg:hidden backdrop-blur-sm transition-opacity duration-300"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
       {/* SIDEBAR */}
-      <aside className={`${isOpen ? "w-64" : "w-20"} bg-slate-900 text-white transition-all duration-300 flex flex-col h-full shrink-0`}>
-        <div className="p-6 text-xl font-bold border-b border-slate-800 flex items-center gap-4 shrink-0">
-          <div className="bg-blue-500 p-2 rounded-lg"><ListChecks size={24} /></div>
-          {isOpen && <span className="truncate">SIG CAFE</span>}
+      <aside className={`
+        fixed inset-y-0 left-0 z-[1500] lg:relative lg:z-0
+        ${isOpen ? "translate-x-0 w-64" : "-translate-x-full lg:translate-x-0 lg:w-20"} 
+        bg-slate-900 text-white transition-all duration-300 flex flex-col h-full shrink-0 shadow-2xl lg:shadow-none
+      `}>
+        <div className="p-6 text-xl font-bold border-b border-slate-800 flex items-center gap-4 shrink-0 justify-between lg:justify-start">
+          <div className="flex items-center gap-4">
+            <div className="bg-blue-500 p-2 rounded-lg"><ListChecks size={24} /></div>
+            {(isOpen || typeof window !== 'undefined' && window.innerWidth < 1024) && <span className="truncate">SIG CAFE</span>}
+          </div>
+          {/* Close button only on mobile */}
+          <button onClick={() => setIsOpen(false)} className="lg:hidden text-slate-400 hover:text-white">
+            <Menu size={24} />
+          </button>
         </div>
 
         <nav className="flex-1 mt-6 px-4 space-y-2 overflow-y-auto custom-scrollbar">
           {menuItems.map((item, index) => (
             <a key={index} href={item.href} className="flex items-center gap-4 p-3 hover:bg-slate-800 rounded-lg transition-colors text-slate-300 hover:text-white whitespace-nowrap">
               <div className="shrink-0">{item.icon}</div>
-              {isOpen && <span>{item.label}</span>}
+              {(isOpen || typeof window !== 'undefined' && window.innerWidth < 1024) && <span>{item.label}</span>}
             </a>
           ))}
         </nav>
@@ -56,19 +74,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           className="m-4 flex items-center gap-4 p-3 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all shrink-0"
         >
           <LogOut size={20} className="shrink-0" />
-          {isOpen && <span>Keluar</span>}
+          {(isOpen || typeof window !== 'undefined' && window.innerWidth < 1024) && <span>Keluar</span>}
         </button>
       </aside>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 flex flex-col min-w-0">
+      <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         
-        <header className="h-16 bg-white border-b flex items-center justify-between px-8 shrink-0">
-          <button onClick={() => setIsOpen(!isOpen)} className="text-gray-500 hover:text-black">
+        <header className="h-16 bg-white border-b flex items-center justify-between px-4 sm:px-8 shrink-0 relative z-[1000]">
+          <button onClick={() => setIsOpen(!isOpen)} className="text-gray-500 hover:text-black p-2 rounded-lg hover:bg-gray-100 transition-colors">
             <Menu />
           </button>
-          <div className="flex items-center gap-4">
-            <div className="text-right mr-2">
+          
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="text-right hidden sm:block">
               <p className="text-sm font-bold text-slate-800">{userName}</p>
               <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">{role.replace('_', ' ')}</p>
             </div>
@@ -78,7 +97,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8 bg-gray-50">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-gray-50 scroll-smooth">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>
