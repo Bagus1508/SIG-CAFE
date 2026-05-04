@@ -62,9 +62,9 @@ export async function GET(req: Request) {
     // Always fetch from Foursquare if searching, default to 'cafe' if query is empty
     const fsqQuery = query || "cafe"
     if (true) {
-      // Broaden to 13000 (Dining and Drinking) to ensure results while still excluding non-food places like "tambal ban"
+      // Restrict to Coffee Shop (13032), Cafe (13034), and Tea Room (13035) to ensure relevance
       const res = await fetch(
-        `https://places-api.foursquare.com/places/search?query=${encodeURIComponent(fsqQuery)}&ll=${lat},${lng}&limit=10&categories=13000`,
+        `https://places-api.foursquare.com/places/search?query=${encodeURIComponent(fsqQuery)}&ll=${lat},${lng}&limit=10&categories=13032,13034,13035`,
         {
           headers: {
             'X-Places-Api-Version': '2025-06-17',

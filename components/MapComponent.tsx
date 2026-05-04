@@ -42,6 +42,7 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
   const [userIcon, setUserIcon] = useState<any>(null)
   const [cafeIcon, setCafeIcon] = useState<any>(null)
   const [dbIcon, setDbIcon] = useState<any>(null)
+  const [bestMatchIcon, setBestMatchIcon] = useState<any>(null)
   const [searching, setSearching] = useState(false)
   const [searchMode, setSearchMode] = useState<'current' | 'surabaya'>('surabaya')
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -111,6 +112,14 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
         iconSize: [30, 46],
         iconAnchor: [15, 46],
       }))
+
+      // Best Match: hijau (untuk hasil paling relevan)
+      setBestMatchIcon(new L.Icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+        iconSize: [35, 51],
+        iconAnchor: [17, 51],
+      }))
     })
   }, [])
 
@@ -169,17 +178,54 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
       new Map(allResults.map((item: any) => [item.id, item])).values()
     ) as any[]
 
-    // Normalize lat/lng and filter out records with invalid coordinates
+    // Sort by relevance then distance
     const normalized = unique
-      .map((item: any) => ({
-        ...item,
-        latitude: parseFloat(item.latitude),
-        longitude: parseFloat(item.longitude),
-      }))
+      .map((item: any) => {
+        // Calculate word-based relevance score
+        const name = (item.name || item.cafeName || '').toLowerCase()
+        const q = mapped.toLowerCase()
+        const queryWords = q.split(/\s+/).filter(w => w.length > 0)
+        
+        let relevance = 0
+        if (name === q) {
+          relevance = 100
+        } else if (name.startsWith(q)) {
+          relevance = 90
+        } else {
+          // Count how many query words match
+          let matches = 0
+          queryWords.forEach(word => {
+            if (name.includes(word)) matches++
+          })
+          
+          if (matches > 0) {
+            // Score based on percentage of words matched
+            relevance = (matches / queryWords.length) * 80
+          }
+        }
+        
+        return {
+          ...item,
+          latitude: parseFloat(item.latitude),
+          longitude: parseFloat(item.longitude),
+          relevance
+        }
+      })
       .filter((item: any) => !isNaN(item.latitude) && !isNaN(item.longitude))
-
-    // Sort by distance if available
-    normalized.sort((a: any, b: any) => (a.distance || 0) - (b.distance || 0))
+      .sort((a: any, b: any) => {
+        // First sort by relevance (descending)
+        if (Math.abs(b.relevance - a.relevance) > 0.1) {
+          return b.relevance - a.relevance
+        }
+        // Then by distance (ascending)
+        if (a.distance === 0) return 1
+        if (b.distance === 0) return -1
+        return a.distance - b.distance
+      })
+      .map((item, index) => ({
+        ...item,
+        isBestMatch: index === 0 && item.relevance > 0 // Only mark as best match if it has some relevance
+      }))
 
     setCafes(normalized)
     setSearching(false)
@@ -189,9 +235,9 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
     dbCafes.forEach(c => recordInteraction(c.id, 'view'))
     // --- END TRACKING ---
 
-    // Only fly to first result if it has valid coordinates
+    // Highlight the top result
     const first = normalized[0]
-    if (first && !isNaN(first.latitude) && !isNaN(first.longitude)) {
+    if (first) {
       setSelectedCafe(first)
       setMapCenter([first.latitude, first.longitude])
     }
@@ -380,6 +426,9 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
               <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
                 <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0"></span> Foursquare
               </div>
+              <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
+                <span className="w-2.5 h-2.5 rounded-full bg-green-500 shrink-0"></span> Hasil Terbaik
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto pr-1 space-y-3">
@@ -396,9 +445,10 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
                         recordInteraction(cafe.id, 'click')
                       }
                     }}
-                    className={`p-3 rounded-2xl border cursor-pointer transition-all shadow-sm ${selectedCafe?.fsq_place_id === cafe.fsq_place_id
-                      ? 'bg-blue-50 border-blue-200'
-                      : 'hover:bg-slate-50 border-transparent'
+                    className={`p-3 rounded-2xl border cursor-pointer transition-all shadow-sm ${
+                      selectedCafe?.id === cafe.id || (selectedCafe?.fsqPlaceId === cafe.fsqPlaceId && cafe.fsqPlaceId)
+                        ? (cafe.isBestMatch ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200')
+                        : (cafe.isBestMatch ? 'border-green-100' : 'hover:bg-slate-50 border-transparent')
                       }`}
                   >
                     <div className="flex gap-3">
@@ -539,7 +589,8 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
 
               {/* Unified Cafe Markers */}
               {allCafes.map((cafe) => {
-                const icon = cafe.source === 'foursquare' ? cafeIcon : dbIcon;
+                let icon = cafe.source === 'foursquare' ? cafeIcon : dbIcon;
+                if (cafe.isBestMatch && bestMatchIcon) icon = bestMatchIcon;
                 if (!icon) return null;
 
                 return (
