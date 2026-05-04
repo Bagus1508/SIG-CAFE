@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import 'leaflet/dist/leaflet.css'
-import { Search, Navigation, MapPin, ExternalLink, ShieldCheck, X, Maximize, Minimize, PanelLeftClose, PanelLeftOpen, Coffee, Wifi, CheckCircle2, Phone, Clock, Sparkles, Utensils, Info } from 'lucide-react'
+import { Search, Navigation, MapPin, ExternalLink, ShieldCheck, X, Maximize, Minimize, PanelLeftClose, PanelLeftOpen, Coffee, Wifi, CheckCircle2, Phone, Clock, Sparkles, Utensils, Info, ChevronLeft, ChevronRight } from 'lucide-react'
 import { fetchCafes } from '@/lib/foursquare'
 import { recordInteraction } from '@/app/dashboard/actions'
 
@@ -48,6 +48,44 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showSidebar, setShowSidebar] = useState(true)
   const searchRef = useRef<HTMLDivElement>(null)
+  
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const imageContainerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setCurrentImageIndex(0)
+    if (imageContainerRef.current) {
+      imageContainerRef.current.scrollTo({ left: 0, behavior: 'smooth' })
+    }
+  }, [selectedCafe])
+
+  const handleNextImage = () => {
+    if (!selectedCafe?.images || selectedCafe.images.length === 0) return
+    const nextIndex = (currentImageIndex + 1) % selectedCafe.images.length
+    setCurrentImageIndex(nextIndex)
+    
+    if (imageContainerRef.current) {
+      const width = imageContainerRef.current.clientWidth
+      imageContainerRef.current.scrollTo({
+        left: width * nextIndex,
+        behavior: 'smooth'
+      })
+    }
+  }
+
+  const handlePrevImage = () => {
+    if (!selectedCafe?.images || selectedCafe.images.length === 0) return
+    const prevIndex = (currentImageIndex - 1 + selectedCafe.images.length) % selectedCafe.images.length
+    setCurrentImageIndex(prevIndex)
+
+    if (imageContainerRef.current) {
+      const width = imageContainerRef.current.clientWidth
+      imageContainerRef.current.scrollTo({
+        left: width * prevIndex,
+        behavior: 'smooth'
+      })
+    }
+  }
 
   useEffect(() => {
     import('leaflet').then(L => {
@@ -99,7 +137,7 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
 
   // Persis logika map/page.tsx — hanya tambahan DB cafes di sidebar & peta
   const handleSearch = async () => {
-    const mapped = keywordMapping[query.toLowerCase()] || query || "coffee shop"
+    const mapped = keywordMapping[query.toLowerCase()] || query || ""
 
     setSearching(true)
     setShowSuggestions(false)
@@ -122,42 +160,40 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
 
     for (const center of searchCenters) {
       const data = await fetchCafes(mapped, center[0], center[1])
-
-      const filtered = (data.results || []).filter((place: any) =>
-        place.categories?.some((cat: any) =>
-          cat.name.toLowerCase().includes('coffee') ||
-          cat.name.toLowerCase().includes('cafe')
-        )
-      )
-
-      allResults.push(...filtered)
+      const results = (data.results || [])
+      allResults.push(...results)
     }
 
-    // Hapus duplikat berdasarkan fsq_place_id (persis map/page.tsx)
+    // Deduplicate by DB id (no more FSQ duplication since we upsert)
     const unique = Array.from(
-      new Map(allResults.map(item => [item.fsq_place_id, item])).values()
-    )
+      new Map(allResults.map((item: any) => [item.id, item])).values()
+    ) as any[]
 
-    // Sort terdekat (persis map/page.tsx)
-    unique.sort((a: any, b: any) => a.distance - b.distance)
+    // Normalize lat/lng and filter out records with invalid coordinates
+    const normalized = unique
+      .map((item: any) => ({
+        ...item,
+        latitude: parseFloat(item.latitude),
+        longitude: parseFloat(item.longitude),
+      }))
+      .filter((item: any) => !isNaN(item.latitude) && !isNaN(item.longitude))
 
-    setCafes(unique)
+    // Sort by distance if available
+    normalized.sort((a: any, b: any) => (a.distance || 0) - (b.distance || 0))
+
+    setCafes(normalized)
     setSearching(false)
 
     // --- INTERACTION TRACKING ---
-    // 1. 'search': catat pencarian keyword untuk semua cafe DB milik owner
     dbCafes.forEach(c => recordInteraction(c.id, 'search'))
-
-    // 2. 'view': catat setiap cafe DB yang muncul dalam jangkauan pencarian
     dbCafes.forEach(c => recordInteraction(c.id, 'view'))
     // --- END TRACKING ---
 
-    if (unique.length > 0) {
-      setSelectedCafe(unique[0])
-      setMapCenter([
-        unique[0].latitude,
-        unique[0].longitude
-      ])
+    // Only fly to first result if it has valid coordinates
+    const first = normalized[0]
+    if (first && !isNaN(first.latitude) && !isNaN(first.longitude)) {
+      setSelectedCafe(first)
+      setMapCenter([first.latitude, first.longitude])
     }
   }
 
@@ -177,31 +213,14 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
     return Math.round(R * c) // dalam meter
   }
 
-  // DB cafes di-normalize agar formatnya sama dengan Foursquare
-  const normalizedDbCafes = dbCafes.map(c => {
-    const lat = parseFloat(c.latitude)
-    const lng = parseFloat(c.longitude)
-    const dist = userLocation ? calculateDistance(userLocation[0], userLocation[1], lat, lng) : 0
-
-    return {
-      ...c,
-      isDb: true,
-      fsq_place_id: `db-${c.id}`,
-      name: c.cafeName,
-      latitude: lat,
-      longitude: lng,
-      location: { formatted_address: c.address },
-      distance: dist,
-      categories: [{ short_name: 'Verified' }]
-    }
-  })
-
-  // Gabungan untuk sidebar: Sort berdasarkan jarak terdekat dari user
-  const allCafes = [...normalizedDbCafes, ...cafes].sort((a, b) => {
-    if (a.distance === 0) return 1
-    if (b.distance === 0) return -1
-    return a.distance - b.distance
-  })
+  // Filter out invalid coordinates from search results
+  const allCafes = cafes
+    .filter(c => !isNaN(c.latitude) && !isNaN(c.longitude))
+    .sort((a, b) => {
+      if (a.distance === 0) return 1
+      if (b.distance === 0) return -1
+      return a.distance - b.distance
+    })
 
   const keywordOptions = Object.keys(keywordMapping).slice(0, 8) // Ambil 8 pertama untuk filter cepat
 
@@ -364,51 +383,63 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
             </div>
 
             <div className="flex-1 overflow-y-auto pr-1 space-y-3">
-              {allCafes.map((cafe) => (
-                <div
-                  key={cafe.fsq_place_id}
-                  onClick={() => {
-                    setSelectedCafe(cafe)
-                    setMapCenter([cafe.latitude, cafe.longitude])
-                    if (cafe.isDb && cafe.id) {
-                      recordInteraction(cafe.id, 'click')
-                    }
-                  }}
-                  className={`p-3 rounded-2xl border cursor-pointer transition-all shadow-sm ${selectedCafe?.fsq_place_id === cafe.fsq_place_id
-                    ? 'bg-blue-50 border-blue-200'
-                    : 'hover:bg-slate-50 border-transparent'
-                    }`}
-                >
-                  <div className="flex gap-3">
-                    <div className={`w-16 h-16 rounded-xl flex items-center justify-center text-2xl shrink-0 ${cafe.isDb ? 'bg-orange-100' : 'bg-slate-100'}`}>
-                      ☕
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <h2 className="font-semibold text-sm text-slate-700 truncate">
-                          {cafe.name}
-                        </h2>
-                        {cafe.isDb && <ShieldCheck size={13} className="text-blue-500 shrink-0" />}
+              {allCafes.length > 0 ? (
+                allCafes.map((cafe) => (
+                  <div
+                    key={`sidebar-${cafe.id || cafe.fsq_place_id}`}
+                    onClick={() => {
+                      setSelectedCafe(cafe)
+                      if (!isNaN(cafe.latitude) && !isNaN(cafe.longitude)) {
+                        setMapCenter([cafe.latitude, cafe.longitude])
+                      }
+                      if (cafe.id) {
+                        recordInteraction(cafe.id, 'click')
+                      }
+                    }}
+                    className={`p-3 rounded-2xl border cursor-pointer transition-all shadow-sm ${selectedCafe?.fsq_place_id === cafe.fsq_place_id
+                      ? 'bg-blue-50 border-blue-200'
+                      : 'hover:bg-slate-50 border-transparent'
+                      }`}
+                  >
+                    <div className="flex gap-3">
+                      <div className={`w-16 h-16 rounded-xl flex items-center justify-center text-2xl shrink-0 ${cafe.isDb ? 'bg-orange-100' : 'bg-slate-100'}`}>
+                        ☕
                       </div>
 
-                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">
-                        {cafe.location?.formatted_address}
-                      </p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <h2 className="font-semibold text-sm text-slate-700 truncate">
+                            {cafe.name}
+                          </h2>
+                          {cafe.isDb && <ShieldCheck size={13} className="text-blue-500 shrink-0" />}
+                        </div>
 
-                      <div className="mt-2 flex justify-between">
-                        <span className={`text-[10px] px-2 py-1 rounded-full ${cafe.isDb ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>
-                          {cafe.categories?.[0]?.short_name || 'Cafe'}
-                        </span>
+                        <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                          {cafe.location?.formatted_address}
+                        </p>
 
-                        <span className="text-[10px] text-slate-400">
-                          {cafe.distance > 0 ? `${cafe.distance} m` : '–'}
-                        </span>
+                        <div className="mt-2 flex justify-between">
+                          <span className={`text-[10px] px-2 py-1 rounded-full ${cafe.isDb ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>
+                            {cafe.categories?.[0]?.short_name || 'Cafe'}
+                          </span>
+
+                          <span className="text-[10px] text-slate-400">
+                            {cafe.distance > 0 ? `${cafe.distance} m` : '–'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 text-2xl">
+                    🔍
+                  </div>
+                  <h3 className="font-medium text-slate-600">Tidak ada hasil</h3>
+                  <p className="text-xs text-slate-400 mt-1">Coba kata kunci lain atau kosongkan untuk melihat semua.</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
@@ -506,36 +537,27 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
                 </Marker>
               )}
 
-              {/* DB Cafes - selalu tampil, marker oranye */}
-              {dbIcon && normalizedDbCafes.map((cafe) => (
-                <Marker
-                  key={cafe.fsq_place_id}
-                  position={[cafe.latitude, cafe.longitude]}
-                  icon={dbIcon}
-                  eventHandlers={{
-                    click: () => {
-                      setSelectedCafe(cafe)
-                      recordInteraction(cafe.id, 'click')
-                    }
-                  }}
-                >
-                  <Popup>{cafe.name}</Popup>
-                </Marker>
-              ))}
+              {/* Unified Cafe Markers */}
+              {allCafes.map((cafe) => {
+                const icon = cafe.source === 'foursquare' ? cafeIcon : dbIcon;
+                if (!icon) return null;
 
-              {/* Foursquare Cafes - tampil setelah cari, marker merah persis map/page.tsx */}
-              {cafeIcon && cafes.map((cafe) => (
-                <Marker
-                  key={cafe.fsq_place_id}
-                  position={[cafe.latitude, cafe.longitude]}
-                  icon={cafeIcon}
-                  eventHandlers={{
-                    click: () => setSelectedCafe(cafe)
-                  }}
-                >
-                  <Popup>{cafe.name}</Popup>
-                </Marker>
-              ))}
+                return (
+                  <Marker
+                    key={`marker-${cafe.id || cafe.fsqPlaceId}`}
+                    position={[cafe.latitude, cafe.longitude]}
+                    icon={icon}
+                    eventHandlers={{
+                      click: () => {
+                        setSelectedCafe(cafe)
+                        if (cafe.id) recordInteraction(cafe.id, 'click')
+                      }
+                    }}
+                  >
+                    <Popup>{cafe.cafeName || cafe.name}</Popup>
+                  </Marker>
+                );
+              })}
             </MapContainer>
           </div>
 
@@ -555,21 +577,40 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
               </button>
 
               {/* Image Header */}
-              <div className={`h-48 sm:h-56 shrink-0 relative overflow-hidden m-4 rounded-md ${selectedCafe.isDb ? 'bg-gradient-to-br from-orange-400 to-orange-600' : 'bg-gradient-to-br from-blue-500 to-blue-700'}`}>
+              <div className={`h-48 sm:h-56 shrink-0 relative overflow-hidden m-4 rounded-xl ${selectedCafe.isDb ? 'bg-gradient-to-br from-orange-400 to-orange-600' : 'bg-gradient-to-br from-blue-500 to-blue-700'}`}>
                 {selectedCafe.images && selectedCafe.images.length > 0 ? (
                   <>
-                    <div className="w-full h-full flex overflow-x-auto snap-x scrollbar-hide">
+                    <div 
+                      ref={imageContainerRef}
+                      className="w-full h-full flex overflow-x-hidden snap-x snap-mandatory scroll-smooth"
+                    >
                       {selectedCafe.images.map((img: any, i: number) => (
                         <img key={i} src={img.url} alt="" className="w-full h-full object-cover shrink-0 snap-center" />
                       ))}
                     </div>
                     {/* Gradient Overlay for better UI depth */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10 pointer-events-none" />
 
                     {selectedCafe.images.length > 1 && (
-                      <div className="absolute bottom-3 right-3 bg-white/20 backdrop-blur-md border border-white/30 px-2.5 py-1 rounded-full text-[10px] font-bold text-white shadow-sm">
-                        1 / {selectedCafe.images.length}
-                      </div>
+                      <>
+                        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-2">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handlePrevImage(); }}
+                            className="bg-white/20 hover:bg-white/40 backdrop-blur-md text-white p-1.5 rounded-full transition-all shadow-md"
+                          >
+                            <ChevronLeft size={20} />
+                          </button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleNextImage(); }}
+                            className="bg-white/20 hover:bg-white/40 backdrop-blur-md text-white p-1.5 rounded-full transition-all shadow-md"
+                          >
+                            <ChevronRight size={20} />
+                          </button>
+                        </div>
+                        <div className="absolute bottom-3 right-3 bg-black/30 backdrop-blur-md border border-white/20 px-3 py-1 rounded-full text-[10px] font-black text-white shadow-lg tracking-wider">
+                          {currentImageIndex + 1} / {selectedCafe.images.length}
+                        </div>
+                      </>
                     )}
                   </>
                 ) : (
@@ -586,18 +627,22 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
               <div className="p-4 overflow-y-auto flex-1 custom-scrollbar">
                 <div className="flex justify-between items-start">
                   <h2 className="font-bold text-lg text-slate-700 leading-tight">
-                    {selectedCafe.name}
+                    {selectedCafe.cafeName || selectedCafe.name}
                   </h2>
 
-                  <span className={`text-[10px] px-2 py-1 rounded-full shrink-0 ml-2 ${selectedCafe.isDb ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>
-                    {selectedCafe.isDb ? 'Verified' : selectedCafe.categories?.[0]?.short_name}
+                  <span className={`text-[10px] px-2 py-1 rounded-full shrink-0 ml-2 font-bold ${
+                    selectedCafe.source === 'foursquare'
+                      ? 'bg-blue-100 text-blue-600'
+                      : 'bg-orange-100 text-orange-600'
+                  }`}>
+                    {selectedCafe.source === 'foursquare' ? '📍 Foursquare' : '✅ Terverifikasi'}
                   </span>
                 </div>
 
-                {selectedCafe.isDb && (
+                {selectedCafe.source !== 'foursquare' && (
                   <div className="flex items-center gap-1 mt-1">
-                    <ShieldCheck size={12} className="text-blue-500" />
-                    <span className="text-[10px] text-blue-500 font-bold">SIG Terverifikasi</span>
+                    <ShieldCheck size={12} className="text-orange-500" />
+                    <span className="text-[10px] text-orange-500 font-bold">SIG Terverifikasi</span>
                   </div>
                 )}
 
@@ -682,7 +727,10 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
               {/* Fixed Footer */}
               <div className="p-3 bg-white border-t border-slate-100 shrink-0">
                 <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedCafe.name + ' ' + (selectedCafe.address || selectedCafe.location?.formatted_address || ''))}`}
+                  href={selectedCafe.source === 'foursquare' 
+                    ? `https://www.google.com/maps/search/?api=1&query=${selectedCafe.latitude},${selectedCafe.longitude}`
+                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedCafe.name)}`
+                  }
                   target="_blank"
                   onClick={() => {
                     if (selectedCafe.isDb && selectedCafe.id) {

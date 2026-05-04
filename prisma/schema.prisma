@@ -36,6 +36,8 @@ model Submission {
   kelurahan       String?
   status       String   @default("Pending")
   revisionNote String?  @db.Text
+  source       String   @default("owner")   // "owner" | "foursquare"
+  fsqPlaceId   String?  @unique
   ownerId      Int
   owner     User     @relation(fields: [ownerId], references: [id])
   interactions Interaction[]
@@ -55,7 +57,7 @@ model Interaction {
   id        Int      @id @default(autoincrement())
   type      String   // 'click', 'view', 'route', 'search'
   cafeId    Int
-  submission Submission @relation(fields: [cafeId], references: [id])
+  submission Submission @relation(fields: [cafeId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 }
 

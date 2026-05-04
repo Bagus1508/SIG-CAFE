@@ -31,7 +31,7 @@ async function main() {
       longitude: '112.6715',
       facilities: 'WiFi, Colokan, AC, Area Smoking, Parkir Luas',
       phone: '0812-3456-7891',
-      openingHours: '08:00 - 22:00',
+      openingHours: 'Senin - Minggu, 08:00 - 22:00',
       ambiance: 'Modern, Minimalist, Work-friendly',
       menuDescription: JSON.stringify([
         { name: 'Caramel Macchiato', price: '45000' },
@@ -50,7 +50,7 @@ async function main() {
       longitude: '112.7441',
       facilities: 'WiFi, Toilet Bersih, AC, Spot Foto, Musholla',
       phone: '031-5683281',
-      openingHours: '10:00 - 22:00',
+      openingHours: 'Senin - Minggu, 10:00 - 22:00',
       ambiance: 'Vintage, Homey, Instagramable',
       menuDescription: JSON.stringify([
         { name: 'Carpentier Burger', price: '65000' },
@@ -69,7 +69,7 @@ async function main() {
       longitude: '112.6658',
       facilities: 'WiFi, Colokan, AC, Area Smoking, Live Music',
       phone: '0813-3333-8888',
-      openingHours: '09:00 - 23:00',
+      openingHours: 'Senin - Minggu, 09:00 - 23:00',
       ambiance: 'Industrial, Casual, Lively',
       menuDescription: JSON.stringify([
         { name: 'Aglio Olio', price: '55000' },
@@ -88,7 +88,7 @@ async function main() {
       longitude: '112.6710',
       facilities: 'VIP Room, WiFi, AC, Parkir Luas, Musholla, Spot Foto',
       phone: '031-5311360',
-      openingHours: '11:00 - 23:30',
+      openingHours: 'Senin - Minggu, 11:00 - 23:30',
       ambiance: 'Elegant, Romantic, Fancy',
       menuDescription: JSON.stringify([
         { name: 'Wagyu Steak', price: '185000' },
@@ -101,26 +101,29 @@ async function main() {
   ]
 
   for (const cafe of cafes) {
-    const exists = await prisma.submission.findUnique({
-      where: { reqNumber: cafe.reqNumber }
-    })
-    
-    if (!exists) {
-      await prisma.submission.create({
-        data: {
-          ...cafe,
-          images: {
-            create: [
-              { url: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&q=80&w=800' },
-              { url: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&q=80&w=800' }
-            ]
-          }
+    await prisma.submission.upsert({
+      where: { reqNumber: cafe.reqNumber },
+      update: {
+        ...cafe,
+        images: {
+          deleteMany: {},
+          create: [
+            { url: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&q=80&w=800' },
+            { url: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&q=80&w=800' }
+          ]
         }
-      })
-      console.log(`Seeded: ${cafe.cafeName}`)
-    } else {
-      console.log(`Skipped: ${cafe.cafeName} (Already exists)`)
-    }
+      },
+      create: {
+        ...cafe,
+        images: {
+          create: [
+            { url: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&q=80&w=800' },
+            { url: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?auto=format&fit=crop&q=80&w=800' }
+          ]
+        }
+      }
+    })
+    console.log(`Upserted: ${cafe.cafeName}`)
   }
 
   console.log('Seeding finished.')

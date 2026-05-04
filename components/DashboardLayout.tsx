@@ -1,12 +1,13 @@
 "use client"
 import { signOut, useSession } from "next-auth/react"
-import { Home, ListChecks, Store, Users, BarChart3, LogOut, Menu, PlusSquare, CheckSquare, Tag, Wifi } from "lucide-react"
+import { Home, ListChecks, Store, Users, BarChart3, LogOut, Menu, PlusSquare, CheckSquare, Tag, Wifi, Globe } from "lucide-react"
 import { useState } from "react"
+import Link from "next/link"
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession()
   const [isOpen, setIsOpen] = useState(true)
-  
+
   const role = (session?.user as any)?.role || "user"
   const userName = session?.user?.name || "User"
 
@@ -34,10 +35,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden relative">
-      
+
       {/* MOBILE OVERLAY */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-[1400] lg:hidden backdrop-blur-sm transition-opacity duration-300"
           onClick={() => setIsOpen(false)}
         />
@@ -62,30 +63,40 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <nav className="flex-1 mt-6 px-4 space-y-2 overflow-y-auto custom-scrollbar">
           {menuItems.map((item, index) => (
-            <a key={index} href={item.href} className="flex items-center gap-4 p-3 hover:bg-slate-800 rounded-lg transition-colors text-slate-300 hover:text-white whitespace-nowrap">
+            <Link key={index} href={item.href} className="flex items-center gap-4 p-3 hover:bg-slate-800 rounded-lg transition-colors text-slate-300 hover:text-white whitespace-nowrap">
               <div className="shrink-0">{item.icon}</div>
               {(isOpen || typeof window !== 'undefined' && window.innerWidth < 1024) && <span>{item.label}</span>}
-            </a>
+            </Link>
           ))}
         </nav>
 
-        <button 
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          className="m-4 flex items-center gap-4 p-3 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all shrink-0"
-        >
-          <LogOut size={20} className="shrink-0" />
-          {(isOpen || typeof window !== 'undefined' && window.innerWidth < 1024) && <span>Keluar</span>}
-        </button>
+        <div className="p-4 border-t border-slate-800 space-y-2">
+          <Link
+            href="/"
+            className="flex items-center gap-4 p-3 hover:bg-slate-800 rounded-lg transition-colors text-slate-300 hover:text-white whitespace-nowrap"
+          >
+            <Globe size={20} className="shrink-0" />
+            {(isOpen || typeof window !== 'undefined' && window.innerWidth < 1024) && <span>Beranda</span>}
+          </Link>
+
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="w-full flex items-center gap-4 p-3 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all shrink-0"
+          >
+            <LogOut size={20} className="shrink-0" />
+            {(isOpen || typeof window !== 'undefined' && window.innerWidth < 1024) && <span>Keluar</span>}
+          </button>
+        </div>
       </aside>
 
       {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        
+
         <header className="h-16 bg-white border-b flex items-center justify-between px-4 sm:px-8 shrink-0 relative z-[1000]">
           <button onClick={() => setIsOpen(!isOpen)} className="text-gray-500 hover:text-black p-2 rounded-lg hover:bg-gray-100 transition-colors">
             <Menu />
           </button>
-          
+
           <div className="flex items-center gap-3 sm:gap-4">
             <div className="text-right hidden sm:block">
               <p className="text-sm font-bold text-slate-800">{userName}</p>

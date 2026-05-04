@@ -22,7 +22,8 @@ import {
   Utensils,
   BookOpen,
   Plus,
-  Trash
+  Trash,
+  Calendar
 } from "lucide-react"
 import Link from "next/link"
 import { createSubmission, updateSubmission, cancelSubmission, getSubmissionById } from "../actions"
@@ -48,6 +49,8 @@ export default function NewSubmissionPage() {
     images: [] as string[],
     facilities: "",
     phone: "",
+    startDay: "Senin",
+    endDay: "Minggu",
     openTime: "08:00",
     closeTime: "22:00",
     ambiance: "",
@@ -71,8 +74,10 @@ export default function NewSubmissionPage() {
             images: data.images.map((img: any) => img.url),
             facilities: (data as any).facilities || "",
             phone: (data as any).phone || "",
-            openTime: ((data as any).openingHours || "08:00 - 22:00").split(" - ")[0] || "08:00",
-            closeTime: ((data as any).openingHours || "08:00 - 22:00").split(" - ")[1] || "22:00",
+            startDay: ((data as any).openingHours || "").split(", ")[0]?.split(" - ")[0] || "Senin",
+            endDay: ((data as any).openingHours || "").split(", ")[0]?.split(" - ")[1] || "Minggu",
+            openTime: (((data as any).openingHours || "").split(", ")[1] || "08:00 - 22:00").split(" - ")[0] || "08:00",
+            closeTime: (((data as any).openingHours || "").split(", ")[1] || "08:00 - 22:00").split(" - ")[1] || "22:00",
             ambiance: (data as any).ambiance || "",
             menuItems: JSON.parse((data as any).menuDescription || "[]"),
             description: (data as any).description || ""
@@ -179,7 +184,7 @@ export default function NewSubmissionPage() {
     let res
     const payload = {
       ...formData,
-      openingHours: `${formData.openTime} - ${formData.closeTime}`,
+      openingHours: `${formData.startDay} - ${formData.endDay}, ${formData.openTime} - ${formData.closeTime}`,
       menuDescription: JSON.stringify(formData.menuItems)
     }
 
@@ -327,6 +332,37 @@ export default function NewSubmissionPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="md:col-span-2 space-y-2">
+                <label className="text-sm font-bold text-slate-700">Hari Operasional</label>
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-1 group">
+                    <Calendar size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors" />
+                    <select
+                      className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-slate-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all text-gray-700 font-medium appearance-none bg-white"
+                      value={formData.startDay}
+                      onChange={(e) => setFormData({ ...formData, startDay: e.target.value })}
+                    >
+                      {["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"].map(day => (
+                        <option key={day} value={day}>{day}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <span className="text-slate-400 font-bold">s/d</span>
+                  <div className="relative flex-1 group">
+                    <Calendar size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors" />
+                    <select
+                      className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-slate-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 outline-none transition-all text-gray-700 font-medium appearance-none bg-white"
+                      value={formData.endDay}
+                      onChange={(e) => setFormData({ ...formData, endDay: e.target.value })}
+                    >
+                      {["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"].map(day => (
+                        <option key={day} value={day}>{day}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">No. Telepon / WhatsApp</label>
                 <div className="relative group">
