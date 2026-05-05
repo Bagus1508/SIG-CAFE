@@ -29,6 +29,8 @@ model Submission {
   facilities String?  @db.Text
   phone      String?
   openingHours String?
+  rating       Float?
+  ratingCount  Int      @default(0)
   ambiance     String?
   menuDescription String? @db.Text
   description     String? @db.Text

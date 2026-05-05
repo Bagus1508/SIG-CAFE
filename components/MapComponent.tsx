@@ -3,9 +3,10 @@
 import React, { useEffect, useState, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import 'leaflet/dist/leaflet.css'
-import { Search, Navigation, MapPin, ExternalLink, ShieldCheck, X, Maximize, Minimize, PanelLeftClose, PanelLeftOpen, Coffee, Wifi, CheckCircle2, Phone, Clock, Sparkles, Utensils, Info, ChevronLeft, ChevronRight } from 'lucide-react'
+import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
+import { Search, Navigation, ShieldCheck, Star, X, Maximize, Minimize, PanelLeftClose, PanelLeftOpen, Map as MapIcon, Loader2 } from 'lucide-react'
 import { fetchCafes } from '@/lib/foursquare'
-import { recordInteraction } from '@/app/dashboard/actions'
 
 const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false })
 const TileLayer = dynamic(() => import('react-leaflet').then(m => m.TileLayer), { ssr: false })
@@ -32,12 +33,13 @@ interface MapComponentProps {
 }
 
 export default function MapComponent({ dbCafes, keywordMapping }: MapComponentProps) {
+  const router = useRouter()
+  const pathname = usePathname()
   const southSurabaya: [number, number] = [-7.3365, 112.7378]
   const [mapCenter, setMapCenter] = useState<[number, number]>(southSurabaya)
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null)
   // cafes = hanya hasil Foursquare (persis seperti map/page.tsx)
   const [cafes, setCafes] = useState<any[]>([])
-  const [selectedCafe, setSelectedCafe] = useState<any>(null)
   const [query, setQuery] = useState("")
   const [userIcon, setUserIcon] = useState<any>(null)
   const [cafeIcon, setCafeIcon] = useState<any>(null)
@@ -48,45 +50,48 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showSidebar, setShowSidebar] = useState(true)
+  const [detailLoadingHref, setDetailLoadingHref] = useState<string | null>(null)
   const searchRef = useRef<HTMLDivElement>(null)
-  
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  const imageContainerRef = useRef<HTMLDivElement>(null)
+  const isDetailMapPage = pathname === '/map'
+
+  const getCafeDetailHref = (cafe: any) => {
+    const id = cafe.id || (cafe.fsqPlaceId ? `fsq-${cafe.fsqPlaceId}` : null)
+    return id ? `/cafes/${encodeURIComponent(String(id))}` : '#'
+  }
+
+  const getCafeImage = (cafe: any) => cafe.images?.[0]?.url || ''
+
+  const getCafeSummary = (cafe: any) =>
+    cafe.ambiance || cafe.description || cafe.facilities || cafe.categories?.[0]?.name || cafe.categories?.[0]?.short_name || 'Cafe'
+
+  const getCafeRating = (cafe: any) =>
+    typeof cafe.rating === 'number' && !Number.isNaN(cafe.rating)
+      ? cafe.rating.toFixed(1)
+      : null
+
+  const recordInteraction = (cafeId: number, type: 'click' | 'view' | 'route' | 'search') => {
+    fetch('/api/interactions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cafeId, type }),
+    }).catch((error) => console.error('Interaction tracking failed:', error))
+  }
+
+  const openCafeDetail = (cafe: any) => {
+    const href = getCafeDetailHref(cafe)
+    if (href === '#') return
+
+    if (cafe.id && typeof cafe.id === 'number') {
+      recordInteraction(cafe.id, 'click')
+    }
+
+    setDetailLoadingHref(href)
+    router.push(href)
+  }
 
   useEffect(() => {
-    setCurrentImageIndex(0)
-    if (imageContainerRef.current) {
-      imageContainerRef.current.scrollTo({ left: 0, behavior: 'smooth' })
-    }
-  }, [selectedCafe])
-
-  const handleNextImage = () => {
-    if (!selectedCafe?.images || selectedCafe.images.length === 0) return
-    const nextIndex = (currentImageIndex + 1) % selectedCafe.images.length
-    setCurrentImageIndex(nextIndex)
-    
-    if (imageContainerRef.current) {
-      const width = imageContainerRef.current.clientWidth
-      imageContainerRef.current.scrollTo({
-        left: width * nextIndex,
-        behavior: 'smooth'
-      })
-    }
-  }
-
-  const handlePrevImage = () => {
-    if (!selectedCafe?.images || selectedCafe.images.length === 0) return
-    const prevIndex = (currentImageIndex - 1 + selectedCafe.images.length) % selectedCafe.images.length
-    setCurrentImageIndex(prevIndex)
-
-    if (imageContainerRef.current) {
-      const width = imageContainerRef.current.clientWidth
-      imageContainerRef.current.scrollTo({
-        left: width * prevIndex,
-        behavior: 'smooth'
-      })
-    }
-  }
+    setDetailLoadingHref(null)
+  }, [pathname])
 
   useEffect(() => {
     import('leaflet').then(L => {
@@ -168,7 +173,7 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
       ]
 
     for (const center of searchCenters) {
-      const data = await fetchCafes(mapped, center[0], center[1])
+      const data = await fetchCafes(mapped, center[0], center[1], query)
       const results = (data.results || [])
       allResults.push(...results)
     }
@@ -217,6 +222,12 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
         if (Math.abs(b.relevance - a.relevance) > 0.1) {
           return b.relevance - a.relevance
         }
+        // Prioritize fresh Foursquare API results, owner data is supplemental
+        const aIsFoursquare = a.source === 'foursquare' || a.isFoursquare
+        const bIsFoursquare = b.source === 'foursquare' || b.isFoursquare
+        if (aIsFoursquare !== bIsFoursquare) {
+          return aIsFoursquare ? -1 : 1
+        }
         // Then by distance (ascending)
         if (a.distance === 0) return 1
         if (b.distance === 0) return -1
@@ -238,7 +249,6 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
     // Highlight the top result
     const first = normalized[0]
     if (first) {
-      setSelectedCafe(first)
       setMapCenter([first.latitude, first.longitude])
     }
   }
@@ -431,56 +441,83 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto pr-1 space-y-3">
+            <div className="flex-1 overflow-y-auto pr-1">
               {allCafes.length > 0 ? (
-                allCafes.map((cafe) => (
-                  <div
-                    key={`sidebar-${cafe.id || cafe.fsq_place_id}`}
-                    onClick={() => {
-                      setSelectedCafe(cafe)
-                      if (!isNaN(cafe.latitude) && !isNaN(cafe.longitude)) {
-                        setMapCenter([cafe.latitude, cafe.longitude])
-                      }
-                      if (cafe.id) {
-                        recordInteraction(cafe.id, 'click')
-                      }
-                    }}
-                    className={`p-3 rounded-2xl border cursor-pointer transition-all shadow-sm ${
-                      selectedCafe?.id === cafe.id || (selectedCafe?.fsqPlaceId === cafe.fsqPlaceId && cafe.fsqPlaceId)
-                        ? (cafe.isBestMatch ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200')
-                        : (cafe.isBestMatch ? 'border-green-100' : 'hover:bg-slate-50 border-transparent')
-                      }`}
-                  >
-                    <div className="flex gap-3">
-                      <div className={`w-16 h-16 rounded-xl flex items-center justify-center text-2xl shrink-0 ${cafe.isDb ? 'bg-orange-100' : 'bg-slate-100'}`}>
-                        ☕
-                      </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {allCafes.map((cafe) => {
+                    const imageUrl = getCafeImage(cafe)
+                    const href = getCafeDetailHref(cafe)
+                    const rating = getCafeRating(cafe)
+                    const isOpeningDetail = detailLoadingHref === href
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <h2 className="font-semibold text-sm text-slate-700 truncate">
-                            {cafe.name}
-                          </h2>
-                          {cafe.isDb && <ShieldCheck size={13} className="text-blue-500 shrink-0" />}
-                        </div>
-
-                        <p className="text-xs text-slate-500 mt-1 line-clamp-2">
-                          {cafe.location?.formatted_address}
-                        </p>
-
-                        <div className="mt-2 flex justify-between">
-                          <span className={`text-[10px] px-2 py-1 rounded-full ${cafe.isDb ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}`}>
-                            {cafe.categories?.[0]?.short_name || 'Cafe'}
-                          </span>
-
-                          <span className="text-[10px] text-slate-400">
-                            {cafe.distance > 0 ? `${cafe.distance} m` : '–'}
+                    return (
+                      <article
+                        key={`sidebar-${cafe.id || cafe.fsqPlaceId}`}
+                        onMouseEnter={() => {
+                          if (!isNaN(cafe.latitude) && !isNaN(cafe.longitude)) {
+                            setMapCenter([cafe.latitude, cafe.longitude])
+                          }
+                        }}
+                        className={`group overflow-hidden rounded-2xl border bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                          cafe.isBestMatch ? 'border-green-200 ring-1 ring-green-100' : 'border-slate-100'
+                        }`}
+                      >
+                        <div className="aspect-[4/3] bg-slate-100 relative overflow-hidden">
+                          {imageUrl ? (
+                            <img src={imageUrl} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                          ) : (
+                            <div className={`h-full w-full flex items-center justify-center text-3xl ${cafe.source === 'foursquare' ? 'bg-blue-100 text-blue-500' : 'bg-orange-100 text-orange-500'}`}>
+                              ☕
+                            </div>
+                          )}
+                          {cafe.isBestMatch && (
+                            <span className="absolute left-2 top-2 rounded-full bg-green-600 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-white">
+                              Terbaik
+                            </span>
+                          )}
+                          <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-white/90 px-2 py-1 text-[9px] font-black text-slate-700 shadow-sm">
+                            <Star size={10} className="fill-yellow-400 text-yellow-400" />
+                            {rating || '-'}
                           </span>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-                ))
+
+                        <div className="p-2.5">
+                          <div className="flex items-start gap-1.5">
+                            <h2 className="min-w-0 flex-1 text-xs font-bold leading-snug text-slate-700 line-clamp-2">
+                              {cafe.name || cafe.cafeName}
+                            </h2>
+                            {cafe.isDb && <ShieldCheck size={12} className="mt-0.5 shrink-0 text-blue-500" />}
+                          </div>
+
+                          <p className="mt-1.5 text-[10px] leading-snug text-slate-500 line-clamp-2">
+                            {getCafeSummary(cafe)}
+                          </p>
+
+                          <div className="mt-2 flex items-center gap-2">
+                            <span className={`min-w-0 flex-1 truncate rounded-full px-2 py-1 text-[9px] font-bold ${cafe.source === 'foursquare' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>
+                              {cafe.categories?.[0]?.short_name || cafe.categories?.[0]?.name || 'Cafe'}
+                            </span>
+                            <span className="shrink-0 text-[9px] font-semibold text-slate-400">
+                              {cafe.distance > 0 ? `${cafe.distance} m` : '-'}
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              openCafeDetail(cafe)
+                            }}
+                            disabled={isOpeningDetail || href === '#'}
+                            className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-white transition-colors hover:bg-blue-700 disabled:cursor-wait disabled:bg-blue-400"
+                          >
+                            {isOpeningDetail && <Loader2 size={12} className="animate-spin" />}
+                            {isOpeningDetail ? 'Membuka...' : 'Lihat Detail'}
+                          </button>
+                        </div>
+                      </article>
+                    )
+                  })}
+                </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4 text-2xl">
@@ -496,6 +533,14 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
 
         {/* Map Area */}
         <div className={`flex-1 relative transition-all duration-500 overflow-hidden ${isFullscreen ? '' : 'rounded-3xl shadow-xl'}`}>
+          {detailLoadingHref && (
+            <div className="absolute inset-0 z-[1200] flex items-center justify-center bg-slate-900/20 backdrop-blur-[2px]">
+              <div className="inline-flex items-center gap-3 rounded-2xl border border-white/40 bg-white/95 px-5 py-3 text-sm font-bold text-slate-700 shadow-2xl">
+                <Loader2 size={18} className="animate-spin text-blue-600" />
+                Membuka detail cafe...
+              </div>
+            </div>
+          )}
 
           {/* Floating Controls */}
           <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-2">
@@ -509,6 +554,16 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
           </div>
 
           <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
+            {!isDetailMapPage && (
+              <Link
+                href="/map"
+                className="bg-blue-600/95 backdrop-blur-md border border-blue-500 px-4 py-3 rounded-2xl shadow-xl hover:bg-blue-700 transition-all text-white flex items-center justify-center gap-2 text-sm font-bold"
+                title="Buka Detail Map"
+              >
+                <MapIcon size={18} />
+                <span className="hidden sm:inline">Detail Map</span>
+              </Link>
+            )}
             <button
               onClick={() => setIsFullscreen(!isFullscreen)}
               className="bg-white/90 backdrop-blur-md border border-slate-200 p-3 rounded-2xl shadow-xl hover:bg-white transition-all text-slate-700 flex items-center justify-center"
@@ -600,8 +655,7 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
                     icon={icon}
                     eventHandlers={{
                       click: () => {
-                        setSelectedCafe(cafe)
-                        if (cafe.id) recordInteraction(cafe.id, 'click')
+                        openCafeDetail(cafe)
                       }
                     }}
                   >
@@ -612,190 +666,6 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
             </MapContainer>
           </div>
 
-          {/* Floating Detail Card - Bottom Sheet style on Mobile */}
-          {selectedCafe && (
-            <div className="fixed inset-x-0 bottom-0 sm:absolute sm:bottom-4 sm:left-auto sm:right-4 sm:w-80 z-[2000] sm:z-[1000] bg-white rounded-t-[32px] sm:rounded-2xl shadow-[0_-8px_30px_rgb(0,0,0,0.12)] sm:shadow-2xl border-t sm:border border-slate-100 overflow-hidden flex flex-col h-[75vh] sm:h-auto sm:max-h-[calc(100%-4rem)] transition-all duration-500 ease-out translate-y-0 animate-in slide-in-from-bottom">
-
-              {/* Mobile Handle Bar */}
-              <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mt-3 mb-1 sm:hidden shrink-0" />
-
-              {/* Close Button */}
-              <button
-                onClick={() => setSelectedCafe(null)}
-                className="absolute top-3 right-3 z-[1010] bg-black/30 hover:bg-black/50 text-white p-2 rounded-full backdrop-blur-md transition-all shadow-lg"
-              >
-                <X size={18} />
-              </button>
-
-              {/* Image Header */}
-              <div className={`h-48 sm:h-56 shrink-0 relative overflow-hidden m-4 rounded-xl ${selectedCafe.isDb ? 'bg-gradient-to-br from-orange-400 to-orange-600' : 'bg-gradient-to-br from-blue-500 to-blue-700'}`}>
-                {selectedCafe.images && selectedCafe.images.length > 0 ? (
-                  <>
-                    <div 
-                      ref={imageContainerRef}
-                      className="w-full h-full flex overflow-x-hidden snap-x snap-mandatory scroll-smooth"
-                    >
-                      {selectedCafe.images.map((img: any, i: number) => (
-                        <img key={i} src={img.url} alt="" className="w-full h-full object-cover shrink-0 snap-center" />
-                      ))}
-                    </div>
-                    {/* Gradient Overlay for better UI depth */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/10 pointer-events-none" />
-
-                    {selectedCafe.images.length > 1 && (
-                      <>
-                        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-2">
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); handlePrevImage(); }}
-                            className="bg-white/20 hover:bg-white/40 backdrop-blur-md text-white p-1.5 rounded-full transition-all shadow-md"
-                          >
-                            <ChevronLeft size={20} />
-                          </button>
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); handleNextImage(); }}
-                            className="bg-white/20 hover:bg-white/40 backdrop-blur-md text-white p-1.5 rounded-full transition-all shadow-md"
-                          >
-                            <ChevronRight size={20} />
-                          </button>
-                        </div>
-                        <div className="absolute bottom-3 right-3 bg-black/30 backdrop-blur-md border border-white/20 px-3 py-1 rounded-full text-[10px] font-black text-white shadow-lg tracking-wider">
-                          {currentImageIndex + 1} / {selectedCafe.images.length}
-                        </div>
-                      </>
-                    )}
-                  </>
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-                    <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-3xl shadow-inner">
-                      ☕
-                    </div>
-                    <span className="text-[10px] font-bold text-white/70 uppercase tracking-widest">No Image Available</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Scrollable Body */}
-              <div className="p-4 overflow-y-auto flex-1 custom-scrollbar">
-                <div className="flex justify-between items-start">
-                  <h2 className="font-bold text-lg text-slate-700 leading-tight">
-                    {selectedCafe.cafeName || selectedCafe.name}
-                  </h2>
-
-                  <span className={`text-[10px] px-2 py-1 rounded-full shrink-0 ml-2 font-bold ${
-                    selectedCafe.source === 'foursquare'
-                      ? 'bg-blue-100 text-blue-600'
-                      : 'bg-orange-100 text-orange-600'
-                  }`}>
-                    {selectedCafe.source === 'foursquare' ? '📍 Foursquare' : '✅ Terverifikasi'}
-                  </span>
-                </div>
-
-                {selectedCafe.source !== 'foursquare' && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <ShieldCheck size={12} className="text-orange-500" />
-                    <span className="text-[10px] text-orange-500 font-bold">SIG Terverifikasi</span>
-                  </div>
-                )}
-
-                <p className="text-sm flex gap-2 mt-3 text-slate-500">
-                  <MapPin size={16} className="shrink-0 mt-[2px]" />
-                  {selectedCafe.address || selectedCafe.location?.formatted_address}
-                </p>
-
-                <div className="mt-4 space-y-3">
-                  <div className="flex items-center gap-3 text-sm text-slate-600">
-                    <Phone size={14} className="text-blue-500" />
-                    <span className={!selectedCafe.phone ? 'text-slate-400 italic' : ''}>
-                      {selectedCafe.phone || 'Belum ada informasi kontak'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm text-slate-600">
-                    <Clock size={14} className="text-blue-500" />
-                    <span className={!selectedCafe.openingHours ? 'text-slate-400 italic' : ''}>
-                      {selectedCafe.openingHours || 'Belum ada informasi jam operasional'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Fasilitas Cafe */}
-                <div className="mt-4 pt-4 border-t border-slate-100">
-                  <div className="flex items-center gap-2 mb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    <Wifi size={12} /> Fasilitas
-                  </div>
-                  {selectedCafe.facilities ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedCafe.facilities.split(", ").map((f: string) => (
-                        <span key={f} className="px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-lg border border-blue-100">
-                          {f}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-slate-400 italic">Belum ada informasi fasilitas.</p>
-                  )}
-                </div>
-
-                {/* Menu */}
-                <div className="mt-4 pt-4 border-t border-slate-100">
-                  <div className="flex items-center gap-2 mb-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    <Utensils size={12} /> Menu Unggulan
-                  </div>
-                  {(() => {
-                    if (!selectedCafe.menuDescription) {
-                      return <p className="text-sm text-slate-400 italic">Belum ada informasi menu.</p>;
-                    }
-                    try {
-                      const items = JSON.parse(selectedCafe.menuDescription);
-                      if (Array.isArray(items) && items.length > 0) {
-                        return (
-                          <div className="flex flex-col gap-2">
-                            {items.map((item: any, i: number) => (
-                              <div key={i} className="flex justify-between items-center bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                                <span className="text-sm font-medium text-slate-700">{item.name}</span>
-                                {item.price && (
-                                  <span className="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-1 rounded-md">
-                                    {item.price.toLowerCase().includes('rp') ? item.price : `Rp ${item.price}`}
-                                  </span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      }
-                    } catch (e) {
-                      // Fallback
-                    }
-                    return <p className="text-sm text-slate-600 leading-relaxed">{selectedCafe.menuDescription}</p>;
-                  })()}
-                </div>
-
-                <div className="mt-3 flex justify-between text-[10px] text-slate-400 italic">
-                  <span>Distance</span>
-                  <span>{selectedCafe.distance > 0 ? `${selectedCafe.distance} meter` : '–'}</span>
-                </div>
-              </div>
-
-              {/* Fixed Footer */}
-              <div className="p-3 bg-white border-t border-slate-100 shrink-0">
-                <a
-                  href={selectedCafe.source === 'foursquare' 
-                    ? `https://www.google.com/maps/search/?api=1&query=${selectedCafe.latitude},${selectedCafe.longitude}`
-                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedCafe.name)}`
-                  }
-                  target="_blank"
-                  onClick={() => {
-                    if (selectedCafe.isDb && selectedCafe.id) {
-                      recordInteraction(selectedCafe.id, 'route')
-                    }
-                  }}
-                  className="w-full flex gap-2 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl justify-center font-bold text-sm shadow-lg shadow-blue-200 transition-all active:scale-95"
-                >
-                  <ExternalLink size={16} />
-                  Navigasi ke Lokasi
-                </a>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

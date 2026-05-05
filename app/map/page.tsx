@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import MapComponent from "@/components/MapComponent"
-import { getPublicApprovedCafes, getKeywordMappings } from "../dashboard/actions"
 import Link from "next/link"
 import { ChevronLeft, Coffee } from "lucide-react"
 
@@ -13,14 +12,14 @@ export default function FullMapPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([
-      getPublicApprovedCafes(),
-      getKeywordMappings()
-    ]).then(([cafes, keywords]) => {
-      setDbCafes(cafes)
-      setKeywordMapping(keywords)
-      setLoading(false)
-    })
+    fetch('/api/public-map-data')
+      .then((res) => res.json())
+      .then((data) => {
+        setDbCafes(data.cafes || [])
+        setKeywordMapping(data.keywordMapping || {})
+      })
+      .catch((error) => console.error('Map data fetch error:', error))
+      .finally(() => setLoading(false))
   }, [])
 
   if (loading) {

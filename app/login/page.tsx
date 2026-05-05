@@ -3,7 +3,8 @@ import { signIn, getSession } from "next-auth/react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Coffee, Lock, User, Loader2 } from "lucide-react"
+import Image from "next/image"
+import { Lock, User, Loader2 } from "lucide-react"
 
 export default function LoginPage() {
   const [username, setUsername] = useState("")
@@ -45,10 +46,17 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo & Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 text-white shadow-xl shadow-blue-500/30 mb-4">
-            <Coffee size={32} />
+          <div className="relative mx-auto mb-4 h-20 w-20 overflow-hidden rounded-3xl bg-white shadow-xl shadow-pink-500/20 ring-1 ring-pink-100">
+            <Image
+              src="/logocafe.png"
+              alt="Logo SIG Cafe"
+              fill
+              sizes="80px"
+              className="object-contain p-1.5"
+              priority
+            />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900">SIG CAFE</h1>
+          <h1 className="text-3xl font-black tracking-tight text-slate-900">SIG CAFE</h1>
           <p className="text-slate-500 mt-2">Silakan masuk ke sistem manajemen</p>
         </div>
 

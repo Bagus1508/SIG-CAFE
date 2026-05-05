@@ -3,6 +3,7 @@ import { signOut, useSession } from "next-auth/react"
 import { Home, ListChecks, Store, Users, BarChart3, LogOut, Menu, PlusSquare, CheckSquare, Tag, Wifi, Globe } from "lucide-react"
 import { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession()
@@ -52,8 +53,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       `}>
         <div className="p-6 text-xl font-bold border-b border-slate-800 flex items-center gap-4 shrink-0 justify-between lg:justify-start">
           <div className="flex items-center gap-4">
-            <div className="bg-blue-500 p-2 rounded-lg"><ListChecks size={24} /></div>
-            {(isOpen || typeof window !== 'undefined' && window.innerWidth < 1024) && <span className="truncate">SIG CAFE</span>}
+            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-white shadow-lg shadow-pink-500/15 ring-1 ring-white/10">
+              <Image
+                src="/logocafe.png"
+                alt="Logo SIG Cafe"
+                fill
+                sizes="40px"
+                className="object-contain p-1"
+                priority
+              />
+            </div>
+            {(isOpen || typeof window !== 'undefined' && window.innerWidth < 1024) && <span className="truncate text-lg font-black tracking-tight">SIG CAFE</span>}
           </div>
           {/* Close button only on mobile */}
           <button onClick={() => setIsOpen(false)} className="lg:hidden text-slate-400 hover:text-white">

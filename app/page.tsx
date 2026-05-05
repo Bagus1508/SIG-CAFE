@@ -1,10 +1,10 @@
 "use client"
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { useSession } from "next-auth/react"
-import { Map as MapIcon, Coffee, Search, ShieldCheck, Navigation2, LogIn, LayoutDashboard, Store } from "lucide-react"
+import { Coffee, ShieldCheck, Navigation2, LogIn, LayoutDashboard, Store } from "lucide-react"
 import MapComponent from "@/components/MapComponent"
-import { getPublicApprovedCafes, getKeywordMappings } from "./dashboard/actions"
 
 export default function LandingPage() {
   const { data: session } = useSession()
@@ -13,14 +13,14 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([
-      getPublicApprovedCafes(),
-      getKeywordMappings()
-    ]).then(([cafes, keywords]) => {
-      setDbCafes(cafes)
-      setKeywordMapping(keywords)
-      setLoading(false)
-    })
+    fetch('/api/public-map-data')
+      .then((res) => res.json())
+      .then((data) => {
+        setDbCafes(data.cafes || [])
+        setKeywordMapping(data.keywordMapping || {})
+      })
+      .catch((error) => console.error('Map data fetch error:', error))
+      .finally(() => setLoading(false))
   }, [])
 
   return (
@@ -29,10 +29,17 @@ export default function LandingPage() {
       <nav className="fixed top-0 left-0 right-0 z-[2000] bg-white/70 backdrop-blur-md border-b border-slate-100 h-20">
         <div className="max-w-7xl mx-auto h-full px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-blue-600 p-2.5 rounded-2xl shadow-lg shadow-blue-500/30">
-              <MapIcon className="text-white" size={24} />
+            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl bg-white shadow-lg shadow-pink-500/20 ring-1 ring-pink-100">
+              <Image
+                src="/logocafe.png"
+                alt="Logo SIG Cafe"
+                fill
+                sizes="48px"
+                className="object-contain p-1"
+                priority
+              />
             </div>
-            <span className="text-2xl font-black text-slate-900 tracking-tighter uppercase">SIG Cafe</span>
+            <span className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight uppercase leading-none">SIG Cafe</span>
           </div>
 
           <div className="hidden md:flex items-center gap-8 text-sm font-bold text-slate-500">
@@ -111,11 +118,17 @@ export default function LandingPage() {
       {/* Simple Footer */}
       <footer className="bg-slate-50 py-12 border-t border-slate-100">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-8">
-          <div className="flex items-center gap-3 grayscale opacity-50">
-            <div className="bg-slate-900 p-2 rounded-lg">
-              <MapIcon className="text-white" size={20} />
+          <div className="flex items-center gap-3 opacity-70">
+            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-slate-200">
+              <Image
+                src="/logocafe.png"
+                alt="Logo SIG Cafe"
+                fill
+                sizes="40px"
+                className="object-contain p-1"
+              />
             </div>
-            <span className="text-xl font-black text-slate-900 tracking-tighter uppercase">SIG Cafe</span>
+            <span className="text-lg sm:text-xl font-black text-slate-900 tracking-tight uppercase leading-none">SIG Cafe</span>
           </div>
           <p className="text-slate-400 text-sm font-medium">
             © 2026 SIG Cafe. Developed with Leaflet, OSM, and Foursquare.
