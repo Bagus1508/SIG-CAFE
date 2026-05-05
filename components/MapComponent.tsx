@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 import 'leaflet/dist/leaflet.css'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Search, Navigation, ShieldCheck, Star, X, Maximize, Minimize, PanelLeftClose, PanelLeftOpen, Map as MapIcon, Loader2 } from 'lucide-react'
+import { Search, Navigation, ShieldCheck, Star, X, Maximize, Minimize, PanelLeftClose, PanelLeftOpen, Map as MapIcon, Loader2, Sparkles } from 'lucide-react'
 import { fetchCafes } from '@/lib/foursquare'
 
 const MapContainer = dynamic(() => import('react-leaflet').then(m => m.MapContainer), { ssr: false })
@@ -61,8 +61,13 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
 
   const getCafeImage = (cafe: any) => cafe.images?.[0]?.url || ''
 
+  const getCafeAmbiance = (cafe: any) =>
+    typeof cafe.ambiance === 'string' && cafe.ambiance.trim()
+      ? cafe.ambiance.trim()
+      : null
+
   const getCafeSummary = (cafe: any) =>
-    cafe.ambiance || cafe.description || cafe.facilities || cafe.categories?.[0]?.name || cafe.categories?.[0]?.short_name || 'Cafe'
+    cafe.description || cafe.facilities || cafe.categories?.[0]?.name || cafe.categories?.[0]?.short_name || 'Cafe'
 
   const getCafeRating = (cafe: any) =>
     typeof cafe.rating === 'number' && !Number.isNaN(cafe.rating)
@@ -448,6 +453,7 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
                     const imageUrl = getCafeImage(cafe)
                     const href = getCafeDetailHref(cafe)
                     const rating = getCafeRating(cafe)
+                    const ambiance = getCafeAmbiance(cafe)
                     const isOpeningDetail = detailLoadingHref === href
 
                     return (
@@ -492,6 +498,13 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
                           <p className="mt-1.5 text-[10px] leading-snug text-slate-500 line-clamp-2">
                             {getCafeSummary(cafe)}
                           </p>
+
+                          {ambiance && (
+                            <div className="mt-2 inline-flex max-w-full items-center gap-1 rounded-lg border border-pink-100 bg-pink-50 px-2 py-1 text-[9px] font-bold text-pink-700">
+                              <Sparkles size={10} className="shrink-0" />
+                              <span className="truncate">Suasana: {ambiance}</span>
+                            </div>
+                          )}
 
                           <div className="mt-2 flex items-center gap-2">
                             <span className={`min-w-0 flex-1 truncate rounded-full px-2 py-1 text-[9px] font-bold ${cafe.source === 'foursquare' ? 'bg-blue-50 text-blue-600' : 'bg-orange-50 text-orange-600'}`}>

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, Clock, ExternalLink, MapPin, Phone, ShieldCheck, Star, Utensils, Wifi } from 'lucide-react'
+import { ArrowLeft, Clock, ExternalLink, MapPin, Phone, ShieldCheck, Sparkles, Star, Utensils, Wifi } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import RatingInput from '@/components/RatingInput'
 
@@ -49,6 +49,7 @@ export default async function CafeDetailPage({ params }: CafeDetailPageProps) {
   const rating = typeof cafe.rating === 'number' && !Number.isNaN(cafe.rating)
     ? cafe.rating.toFixed(1)
     : null
+  const ambiance = cafe.ambiance?.trim() || null
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-800">
@@ -89,11 +90,15 @@ export default async function CafeDetailPage({ params }: CafeDetailPageProps) {
               {cafe.cafeName}
             </h1>
 
-            {cafe.ambiance && (
-              <p className="mt-3 text-sm font-semibold text-slate-500">
-                {cafe.ambiance}
+            <div className="mt-4 rounded-2xl border border-pink-100 bg-pink-50 p-4">
+              <div className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-pink-600">
+                <Sparkles size={14} />
+                Suasana Cafe
+              </div>
+              <p className={`text-sm font-semibold leading-relaxed ${ambiance ? 'text-slate-700' : 'text-slate-400'}`}>
+                {ambiance || 'Belum ada informasi suasana cafe.'}
               </p>
-            )}
+            </div>
 
             <div className="mt-4 inline-flex items-center gap-2 rounded-xl border border-yellow-100 bg-yellow-50 px-3 py-2 text-sm font-black text-slate-700">
               <Star size={16} className="fill-yellow-400 text-yellow-400" />
