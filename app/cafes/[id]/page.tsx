@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, Clock, ExternalLink, MapPin, Phone, ShieldCheck, Sparkles, Star, Utensils, Wifi } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import RatingInput from '@/components/RatingInput'
+import CafeImageGallery from '@/components/CafeImageGallery'
 
 type CafeDetailPageProps = {
   params: Promise<{ id: string }>
@@ -45,11 +46,17 @@ export default async function CafeDetailPage({ params }: CafeDetailPageProps) {
   const images = cafe.images || []
   const menuItems = parseMenuItems(cafe.menuDescription)
   const facilities = cafe.facilities?.split(',').map((item) => item.trim()).filter(Boolean) || []
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${cafe.latitude},${cafe.longitude}`)}`
+  const latitude = cafe.latitude?.trim()
+  const longitude = cafe.longitude?.trim()
+  const coordinateLabel = latitude && longitude ? `${latitude}, ${longitude}` : null
+  const mapsQuery = coordinateLabel || cafe.address
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}`
+  const mapEmbedUrl = `https://www.google.com/maps?q=${encodeURIComponent(mapsQuery)}&z=16&output=embed`
   const rating = typeof cafe.rating === 'number' && !Number.isNaN(cafe.rating)
     ? cafe.rating.toFixed(1)
     : null
   const ambiance = cafe.ambiance?.trim() || null
+  const description = cafe.description?.trim() || null
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-800">
@@ -67,18 +74,7 @@ export default async function CafeDetailPage({ params }: CafeDetailPageProps) {
 
         <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            {images.length > 0 ? (
-              <div className="grid gap-2 p-2 sm:grid-cols-2">
-                <img src={images[0].url} alt="" className="h-80 w-full rounded-xl object-cover sm:col-span-2" />
-                {images.slice(1, 3).map((image) => (
-                  <img key={image.id} src={image.url} alt="" className="h-44 w-full rounded-xl object-cover" />
-                ))}
-              </div>
-            ) : (
-              <div className="flex h-80 items-center justify-center bg-blue-50 text-6xl text-blue-500">
-                ☕
-              </div>
-            )}
+            <CafeImageGallery images={images} cafeName={cafe.cafeName} />
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -138,6 +134,49 @@ export default async function CafeDetailPage({ params }: CafeDetailPageProps) {
           </div>
         </section>
 
+        <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="grid gap-0 lg:grid-cols-[0.85fr_1.15fr]">
+            <div className="p-6">
+              <div className="mb-4 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-blue-600">
+                <MapPin size={14} />
+                Lokasi Cafe
+              </div>
+              <h2 className="text-xl font-black text-slate-900">{cafe.cafeName}</h2>
+              <div className="mt-4 space-y-3 text-sm text-slate-600">
+                <p className="flex gap-3">
+                  <MapPin size={18} className="mt-0.5 shrink-0 text-blue-500" />
+                  <span>{cafe.address}</span>
+                </p>
+                {coordinateLabel && (
+                  <p className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500">
+                    Koordinat: {coordinateLabel}
+                  </p>
+                )}
+              </div>
+
+              <a
+                href={mapsUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition-colors hover:bg-blue-700"
+              >
+                <ExternalLink size={16} />
+                Buka di Google Maps
+              </a>
+            </div>
+
+            <div className="min-h-[320px] border-t border-slate-100 lg:border-l lg:border-t-0">
+              <iframe
+                title={`Peta lokasi ${cafe.cafeName}`}
+                src={mapEmbedUrl}
+                className="h-full min-h-[320px] w-full"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            </div>
+          </div>
+        </section>
+
         <section className="mt-6 grid gap-6 lg:grid-cols-2">
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="mb-4 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
@@ -179,12 +218,12 @@ export default async function CafeDetailPage({ params }: CafeDetailPageProps) {
           </div>
         </section>
 
-        {cafe.description && (
-          <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-3 text-sm font-black uppercase tracking-widest text-slate-400">Deskripsi</h2>
-            <p className="text-sm leading-relaxed text-slate-600">{cafe.description}</p>
-          </section>
-        )}
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-3 text-sm font-black uppercase tracking-widest text-slate-400">Tentang Cafe</h2>
+          <p className={`text-sm leading-relaxed ${description ? 'text-slate-600' : 'text-slate-400'}`}>
+            {description || 'Belum ada informasi tentang cafe.'}
+          </p>
+        </section>
       </div>
     </main>
   )
