@@ -1,24 +1,19 @@
 "use client"
 import DashboardLayout from "@/components/DashboardLayout"
-import { Coffee, MapPin, Edit, Plus, Store, Search, X, Loader2, Navigation } from "lucide-react"
+import { Coffee, MapPin, Edit, Plus, Store, Search, Loader2, Trash2 } from "lucide-react"
 import { useState, useEffect } from "react"
-import { getApprovedCafes, updateCafeInfo } from "./actions"
+import { getApprovedCafes } from "./actions"
+import { deleteSubmission } from "../submissions/actions"
 import Link from "next/link"
+import ConfirmModal from "@/components/ConfirmModal"
 
 export default function CafeManagement() {
   const [cafes, setCafes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingCafe, setEditingCafe] = useState<any | null>(null)
-  const [submitting, setSubmitting] = useState(false)
-
-  const [formData, setFormData] = useState({
-    cafeName: "",
-    capacity: "",
-    address: "",
-    latitude: "",
-    longitude: "",
+  const [confirmDelete, setConfirmDelete] = useState<{ isOpen: boolean; id: number | null }>({
+    isOpen: false,
+    id: null
   })
 
   const loadData = async () => {
@@ -34,32 +29,20 @@ export default function CafeManagement() {
 
   const filteredCafes = cafes.filter(c => 
     c.cafeName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    c.address.toLowerCase().includes(searchTerm.toLowerCase())
+    c.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.reqNumber.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const handleOpenModal = (cafe: any) => {
-    setEditingCafe(cafe)
-    setFormData({
-      cafeName: cafe.cafeName,
-      capacity: cafe.capacity.toString(),
-      address: cafe.address,
-      latitude: cafe.latitude,
-      longitude: cafe.longitude,
-    })
-    setIsModalOpen(true)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubmitting(true)
-    const res = await updateCafeInfo(editingCafe.id, formData)
+  const handleDelete = async () => {
+    if (!confirmDelete.id) return
+    
+    const res = await deleteSubmission(confirmDelete.id)
     if (res.success) {
       await loadData()
-      setIsModalOpen(false)
+      setConfirmDelete({ isOpen: false, id: null })
     } else {
-      alert(res.error || "Gagal memperbarui data café")
+      alert(res.error || "Gagal menghapus data café")
     }
-    setSubmitting(false)
   }
 
   return (
@@ -67,7 +50,7 @@ export default function CafeManagement() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Manajemen Data Café</h1>
-          <p className="text-slate-500 text-sm">Kelola informasi cabang café Anda yang sudah aktif</p>
+          <p className="text-slate-500 text-sm">Kelola informasi seluruh cabang café (Foursquare, Admin, & Owner)</p>
         </div>
         <Link 
           href="/dashboard/submissions/new"
@@ -90,7 +73,7 @@ export default function CafeManagement() {
           <Search className="text-slate-400 mr-3" size={18} />
           <input 
             type="text" 
-            placeholder="Cari café berdasarkan nama atau lokasi..."
+            placeholder="Cari café berdasarkan kode, nama atau lokasi..."
             className="w-full bg-transparent outline-none text-sm text-slate-700"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -98,16 +81,15 @@ export default function CafeManagement() {
         </div>
       </div>
 
-      {/* Tabel Data Cafe */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 text-sm">
               <tr>
+                <th className="p-4 font-semibold">Kode</th>
                 <th className="p-4 font-semibold">Nama Cabang</th>
                 <th className="p-4 font-semibold">Alamat</th>
                 <th className="p-4 font-semibold">Kapasitas</th>
-                <th className="p-4 font-semibold">Koordinat</th>
                 <th className="p-4 font-semibold text-center">Aksi</th>
               </tr>
             </thead>
@@ -122,6 +104,7 @@ export default function CafeManagement() {
               ) : filteredCafes.length > 0 ? (
                 filteredCafes.map((cafe) => (
                   <tr key={cafe.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="p-4 text-sm font-bold text-blue-600">{cafe.reqNumber}</td>
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <div className="bg-slate-100 p-2 rounded-lg text-slate-600"><Coffee size={16} /></div>
@@ -134,16 +117,19 @@ export default function CafeManagement() {
                       </div>
                     </td>
                     <td className="p-4 text-sm text-slate-600 font-medium">{cafe.capacity} Kursi</td>
-                    <td className="p-4 text-xs font-mono text-slate-400 italic">
-                      {cafe.latitude}, {cafe.longitude}
-                    </td>
                     <td className="p-4 text-center">
-                      <div className="flex justify-center gap-2">
-                        <button 
-                          onClick={() => handleOpenModal(cafe)}
+                      <div className="flex justify-center gap-1">
+                        <Link 
+                          href={`/dashboard/submissions/new?id=${cafe.id}&from=cafes`}
                           className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                         >
-                          <Edit size={18} />
+                          <Edit size={16} />
+                        </Link>
+                        <button 
+                          onClick={() => setConfirmDelete({ isOpen: true, id: cafe.id })}
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                        >
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </td>
@@ -161,101 +147,15 @@ export default function CafeManagement() {
         </div>
       </div>
 
-      {/* Modal Edit Cafe */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="font-bold text-slate-800">Perbarui Informasi Café</h3>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 text-slate-400 hover:bg-slate-50 rounded-full transition-all">
-                <X size={18} />
-              </button>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Nama Cabang</label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm text-gray-700"
-                    value={formData.cafeName}
-                    onChange={(e) => setFormData({...formData, cafeName: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Kapasitas Kursi</label>
-                  <input
-                    type="number"
-                    required
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm text-gray-700"
-                    value={formData.capacity}
-                    onChange={(e) => setFormData({...formData, capacity: e.target.value})}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Alamat Lengkap</label>
-                <textarea
-                  required
-                  rows={2}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all text-sm text-gray-700"
-                  value={formData.address}
-                  onChange={(e) => setFormData({...formData, address: e.target.value})}
-                ></textarea>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
-                    <Navigation size={10} /> Latitude
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm font-mono text-gray-700"
-                    value={formData.latitude}
-                    onChange={(e) => setFormData({...formData, latitude: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
-                    <Navigation size={10} /> Longitude
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all text-sm font-mono text-gray-700"
-                    value={formData.longitude}
-                    onChange={(e) => setFormData({...formData, longitude: e.target.value})}
-                  />
-                </div>
-              </div>
-
-              <div className="pt-4 flex gap-3">
-                <button
-                  type="button"
-                  disabled={submitting}
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 px-4 py-2.5 border border-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-all text-sm disabled:opacity-50"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="flex-1 px-4 py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-70"
-                >
-                  {submitting && <Loader2 className="animate-spin" size={16} />}
-                  Simpan Perubahan
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        isOpen={confirmDelete.isOpen}
+        title="Hapus Data Café?"
+        message="Tindakan ini akan menghapus data cabang café secara permanen dari sistem."
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete({ isOpen: false, id: null })}
+        confirmText="Ya, Hapus"
+        type="danger"
+      />
     </DashboardLayout>
   )
 }

@@ -26,12 +26,19 @@ export async function getSubmissions() {
 
     if (role === "admin") {
       return await prisma.submission.findMany({
-        orderBy: { createdAt: 'desc' },
+        where: { 
+          source: "owner",
+          status: "Disetujui"
+        },
+        orderBy: { updatedAt: 'desc' },
         include: { owner: true, images: true }
       })
     } else {
       return await prisma.submission.findMany({
-        where: { ownerId: userId },
+        where: { 
+          ownerId: userId,
+          source: "owner"
+        },
         orderBy: { createdAt: 'desc' },
         include: { images: true }
       })

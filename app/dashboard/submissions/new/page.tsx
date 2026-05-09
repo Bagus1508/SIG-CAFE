@@ -35,6 +35,8 @@ export default function NewSubmissionPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const editId = searchParams.get("id")
+  const from = searchParams.get("from")
+  const backUrl = from === "cafes" ? "/dashboard/cafes" : "/dashboard/submissions"
 
   const [loading, setLoading] = useState(false)
   const [successState, setSuccessState] = useState<"created" | "updated" | "cancelled" | null>(null)
@@ -236,7 +238,7 @@ export default function NewSubmissionPage() {
                 "Status pengajuan ini telah resmi diubah menjadi Dibatalkan."}
           </p>
           <div className="flex gap-4">
-            <Link href="/dashboard/submissions" className="px-6 py-3 bg-white border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-all">
+            <Link href={backUrl} className="px-6 py-3 bg-white border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-all">
               Kembali ke Daftar
             </Link>
             {successState !== 'cancelled' && (
@@ -256,14 +258,16 @@ export default function NewSubmissionPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <Link href="/dashboard/submissions" className="p-2 bg-white rounded-xl border border-slate-200 text-slate-400 hover:text-blue-600 transition-colors">
+            <Link href={backUrl} className="p-2 bg-white rounded-xl border border-slate-200 text-slate-400 hover:text-blue-600 transition-colors">
               <ArrowLeft size={20} />
             </Link>
             <div>
               <h1 className="text-2xl font-bold text-slate-800">
-                {editId ? "Edit Pengajuan Café" : "Form Pengajuan Café"}
+                {from === "cafes" ? "Edit Informasi Café" : editId ? "Edit Pengajuan Café" : "Form Pengajuan Café"}
               </h1>
-              <p className="text-slate-500 text-sm">Lengkapi data untuk mendaftarkan titik lokasi café baru.</p>
+              <p className="text-slate-500 text-sm">
+                {from === "cafes" ? "Perbarui informasi detail cabang café Anda." : "Lengkapi data untuk mendaftarkan titik lokasi café baru."}
+              </p>
             </div>
           </div>
 
@@ -580,7 +584,7 @@ export default function NewSubmissionPage() {
           {/* Action Buttons */}
           <div className="flex justify-end gap-4 pb-12">
             <Link
-              href="/dashboard/submissions"
+              href={backUrl}
               className="px-6 py-3 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition-all flex items-center justify-center"
             >
               Batal
