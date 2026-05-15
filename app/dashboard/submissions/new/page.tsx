@@ -31,7 +31,9 @@ import { getPublicFacilities } from "@/app/dashboard/actions"
 import { useRouter, useSearchParams } from "next/navigation"
 import ConfirmModal from "@/components/ConfirmModal"
 
-export default function NewSubmissionPage() {
+import { Suspense } from "react"
+
+function NewSubmissionFormContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const editId = searchParams.get("id")
@@ -615,5 +617,20 @@ export default function NewSubmissionPage() {
         type="danger"
       />
     </DashboardLayout>
+  )
+}
+
+export default function NewSubmissionPage() {
+  return (
+    <Suspense fallback={
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <Loader2 className="animate-spin text-blue-600 mb-4" size={40} />
+          <p className="text-slate-400 font-medium">Memuat halaman...</p>
+        </div>
+      </DashboardLayout>
+    }>
+      <NewSubmissionFormContent />
+    </Suspense>
   )
 }
