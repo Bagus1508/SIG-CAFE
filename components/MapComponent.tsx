@@ -195,7 +195,7 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
         const name = (item.name || item.cafeName || '').toLowerCase()
         const q = mapped.toLowerCase()
         const queryWords = q.split(/\s+/).filter(w => w.length > 0)
-        
+
         let relevance = 0
         if (name === q) {
           relevance = 100
@@ -207,13 +207,13 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
           queryWords.forEach(word => {
             if (name.includes(word)) matches++
           })
-          
+
           if (matches > 0) {
             // Score based on percentage of words matched
             relevance = (matches / queryWords.length) * 80
           }
         }
-        
+
         return {
           ...item,
           latitude: parseFloat(item.latitude),
@@ -464,9 +464,8 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
                             setMapCenter([cafe.latitude, cafe.longitude])
                           }
                         }}
-                        className={`group overflow-hidden rounded-2xl border bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
-                          cafe.isBestMatch ? 'border-green-200 ring-1 ring-green-100' : 'border-slate-100'
-                        }`}
+                        className={`group overflow-hidden rounded-2xl border bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${cafe.isBestMatch ? 'border-green-200 ring-1 ring-green-100' : 'border-slate-100'
+                          }`}
                       >
                         <div className="aspect-[4/3] bg-slate-100 relative overflow-hidden">
                           {imageUrl ? (

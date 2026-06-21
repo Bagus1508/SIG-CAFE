@@ -49,9 +49,9 @@ export default async function CafeDetailPage({ params }: CafeDetailPageProps) {
   const latitude = cafe.latitude?.trim()
   const longitude = cafe.longitude?.trim()
   const coordinateLabel = latitude && longitude ? `${latitude}, ${longitude}` : null
-  const mapsQuery = coordinateLabel || cafe.address
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}`
-  const mapEmbedUrl = `https://www.google.com/maps?q=${encodeURIComponent(mapsQuery)}&z=16&output=embed`
+  const mapsSearchQuery = cafe.address ? `${cafe.cafeName}, ${cafe.address}` : cafe.cafeName
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsSearchQuery)}`
+  const mapEmbedUrl = `https://www.google.com/maps?q=${encodeURIComponent(coordinateLabel || cafe.address || cafe.cafeName)}&z=16&output=embed`
   const rating = typeof cafe.rating === 'number' && !Number.isNaN(cafe.rating)
     ? cafe.rating.toFixed(1)
     : null
