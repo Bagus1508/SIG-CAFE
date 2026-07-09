@@ -198,7 +198,7 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
 
     const fetchPromises = searchCenters.map(center => fetchCafes(mapped, center[0], center[1], activeQuery))
     const resultsArrays = await Promise.all(fetchPromises)
-    
+
     resultsArrays.forEach(data => {
       allResults.push(...(data.results || []))
     })

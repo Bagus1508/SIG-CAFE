@@ -53,7 +53,7 @@ const searchableFields = [
 const ignoredLocalTokens = new Set(['cafe', 'kafe', 'coffee', 'kopi', 'shop', 'untuk', 'buat', 'tempat', 'yang', 'di', 'ke', 'dari', 'dan', 'atau', 'dengan', 'ada', 'bisa', 'cocok', 'cari', 'rekomendasi', 'nyari', 'bagus', 'enak'])
 const allowedFoursquareCafeCategoryIds = new Set(['13032', '13034', '13035'])
 const cafeNameWords = ['cafe', 'kafe', 'coffee', 'kopi', 'tea', 'teh', 'roastery']
-const blockedNonCafeWords = ['bengkel', 'workshop', 'garage', 'repair', 'service', 'servis', 'warung', 'warkop', 'toko', 'kelontong', 'bakso', 'soto', 'mie', 'nasi', 'ayam', 'bebek', 'ikan', 'depot', 'rombong']
+const blockedNonCafeWords = ['bengkel', 'workshop', 'garage', 'repair', 'service', 'servis', 'warung', 'warkop', 'toko', 'kelontong', 'bakso', 'soto', 'mie', 'nasi', 'ayam', 'bebek', 'ikan', 'depot', 'rombong', 'cv', 'pt', 'tambal', 'ban', 'motor', 'mobil', 'laundry', 'klinik', 'salon', 'pangkas', 'barbershop', 'fotocopy', 'warnet', 'apotek', 'warteg']
 
 const localKeywordSynonyms: Record<string, string[]> = {
   aesthetic: ['aesthetic', 'estetik', 'instagrammable', 'instagramable'],
@@ -133,8 +133,13 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
   return Math.round(R * c)
 }
 
-const textIncludesAny = (text: string, words: string[]) =>
-  words.some((word) => text.includes(word))
+const textIncludesAny = (text: string, words: string[]) => {
+  return words.some((word) => {
+    const escapedWord = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const regex = new RegExp(`\\b${escapedWord}\\b`, 'i')
+    return regex.test(text)
+  })
+}
 
 const hasCafeCategory = (categories?: FoursquareCategory[]) =>
   Boolean(categories?.some((cat) => {

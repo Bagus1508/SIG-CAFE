@@ -78,9 +78,8 @@ export default function CafeImageGallery({ images, cafeName }: CafeImageGalleryP
               key={image.id}
               type="button"
               onClick={() => setActiveIndex(index)}
-              className={`h-16 w-20 shrink-0 overflow-hidden rounded-lg border-2 transition-all ${
-                index === activeIndex ? "border-blue-500 ring-2 ring-blue-100" : "border-transparent opacity-70 hover:opacity-100"
-              }`}
+              className={`h-16 w-20 shrink-0 overflow-hidden rounded-lg border-2 transition-all ${index === activeIndex ? "border-blue-500 ring-2 ring-blue-100" : "border-transparent opacity-70 hover:opacity-100"
+                }`}
               aria-label={`Tampilkan gambar ${index + 1}`}
             >
               <img

@@ -55,15 +55,15 @@ export default function StatisticsPage() {
               <option>1 Tahun Terakhir</option>
             </select>
           </div>
-        <div className="h-64 bg-slate-50 rounded-2xl flex items-end justify-around p-4 gap-2">
-        {data.map((h, i) => (
-            <div
-            key={i}
-            className="w-full bg-blue-500 rounded-t-lg transition-all hover:bg-blue-600 cursor-pointer"
-            style={{ height: `${h}%` }}
-            ></div>
-        ))}
-        </div>
+          <div className="h-64 bg-slate-50 rounded-2xl flex items-end justify-around p-4 gap-2">
+            {data.map((h, i) => (
+              <div
+                key={i}
+                className="w-full bg-blue-500 rounded-t-lg transition-all hover:bg-blue-600 cursor-pointer"
+                style={{ height: `${h}%` }}
+              ></div>
+            ))}
+          </div>
           <div className="flex justify-around mt-4 text-xs text-slate-400 font-medium uppercase tracking-widest">
             <span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>Mei</span><span>Jun</span>
           </div>
@@ -82,8 +82,8 @@ export default function StatisticsPage() {
                   <span className="text-slate-500">{cafe.requests} Req</span>
                 </div>
                 <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-indigo-500 rounded-full" 
+                  <div
+                    className="h-full bg-indigo-500 rounded-full"
                     style={{ width: cafe.percentage }}
                   ></div>
                 </div>
