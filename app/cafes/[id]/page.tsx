@@ -147,8 +147,13 @@ export default async function CafeDetailPage({ params }: CafeDetailPageProps) {
                   <MapPin size={18} className="mt-0.5 shrink-0 text-blue-500" />
                   <span>{cafe.address}</span>
                 </p>
+                {(cafe.kelurahan || cafe.kecamatan) && (
+                  <p className="mt-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500">
+                    Kecamatan: {cafe.kecamatan || '-'} • Kelurahan: {cafe.kelurahan || '-'}
+                  </p>
+                )}
                 {coordinateLabel && (
-                  <p className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500">
+                  <p className="mt-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500">
                     Koordinat: {coordinateLabel}
                   </p>
                 )}

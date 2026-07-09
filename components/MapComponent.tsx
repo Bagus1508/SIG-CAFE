@@ -144,6 +144,15 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const initialQ = params.get('q')
+    if (initialQ && cafes.length === 0) {
+      setQuery(initialQ)
+      handleSearch(initialQ)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   const detectLocation = () => {
     navigator.geolocation.getCurrentPosition((pos) => {
       const lat = pos.coords.latitude
@@ -155,8 +164,18 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
   }
 
   // Persis logika map/page.tsx — hanya tambahan DB cafes di sidebar & peta
-  const handleSearch = async () => {
-    const mapped = keywordMapping[query.toLowerCase()] || query || ""
+  const handleSearch = async (overrideQuery?: string) => {
+    const activeQuery = typeof overrideQuery === 'string' ? overrideQuery : query
+    const mapped = keywordMapping[activeQuery.toLowerCase()] || activeQuery || ""
+
+    // Update URL query parameters without full reload
+    const params = new URLSearchParams(window.location.search)
+    if (activeQuery) {
+      params.set('q', activeQuery)
+    } else {
+      params.delete('q')
+    }
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false })
 
     setSearching(true)
     setShowSuggestions(false)
@@ -177,11 +196,12 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
         [-7.2752, 112.7284], // Sawahan
       ]
 
-    for (const center of searchCenters) {
-      const data = await fetchCafes(mapped, center[0], center[1], query)
-      const results = (data.results || [])
-      allResults.push(...results)
-    }
+    const fetchPromises = searchCenters.map(center => fetchCafes(mapped, center[0], center[1], activeQuery))
+    const resultsArrays = await Promise.all(fetchPromises)
+    
+    resultsArrays.forEach(data => {
+      allResults.push(...(data.results || []))
+    })
 
     // Deduplicate by DB id (no more FSQ duplication since we upsert)
     const unique = Array.from(
@@ -245,11 +265,6 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
 
     setCafes(normalized)
     setSearching(false)
-
-    // --- INTERACTION TRACKING ---
-    dbCafes.forEach(c => recordInteraction(c.id, 'search'))
-    dbCafes.forEach(c => recordInteraction(c.id, 'view'))
-    // --- END TRACKING ---
 
     // Highlight the top result
     const first = normalized[0]
@@ -378,7 +393,7 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
                   </button>
 
                   <button
-                    onClick={handleSearch}
+                    onClick={() => handleSearch()}
                     disabled={searching}
                     className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white px-4 rounded-xl flex items-center gap-2 shrink-0 transition-colors"
                   >
@@ -610,7 +625,7 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
                     />
                   </div>
                   <button
-                    onClick={handleSearch}
+                    onClick={() => handleSearch()}
                     className="bg-blue-600 text-white p-3 rounded-2xl shadow-xl hover:bg-blue-700 transition-all"
                   >
                     <Search size={18} />

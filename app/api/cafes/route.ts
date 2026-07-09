@@ -50,10 +50,10 @@ const searchableFields = [
   'description',
 ] as const
 
-const ignoredLocalTokens = new Set(['cafe', 'kafe', 'coffee', 'kopi', 'shop'])
+const ignoredLocalTokens = new Set(['cafe', 'kafe', 'coffee', 'kopi', 'shop', 'untuk', 'buat', 'tempat', 'yang', 'di', 'ke', 'dari', 'dan', 'atau', 'dengan', 'ada', 'bisa', 'cocok', 'cari', 'rekomendasi', 'nyari', 'bagus', 'enak'])
 const allowedFoursquareCafeCategoryIds = new Set(['13032', '13034', '13035'])
 const cafeNameWords = ['cafe', 'kafe', 'coffee', 'kopi', 'tea', 'teh', 'roastery']
-const blockedNonCafeWords = ['bengkel', 'workshop', 'garage', 'repair', 'service', 'servis']
+const blockedNonCafeWords = ['bengkel', 'workshop', 'garage', 'repair', 'service', 'servis', 'warung', 'warkop', 'toko', 'kelontong', 'bakso', 'soto', 'mie', 'nasi', 'ayam', 'bebek', 'ikan', 'depot', 'rombong']
 
 const localKeywordSynonyms: Record<string, string[]> = {
   aesthetic: ['aesthetic', 'estetik', 'instagrammable', 'instagramable'],
@@ -65,9 +65,13 @@ const localKeywordSynonyms: Record<string, string[]> = {
   work: ['work', 'coworking', 'work-friendly', 'wifi'],
   coworking: ['work', 'coworking', 'work-friendly', 'wifi'],
   wifi: ['wifi', 'internet', 'work-friendly'],
-  belajar: ['belajar', 'study', 'quiet', 'senyap'],
-  study: ['belajar', 'study', 'quiet', 'senyap'],
-  meeting: ['meeting', 'rapat'],
+  belajar: ['belajar', 'study', 'quiet', 'senyap', 'wifi', 'coworking', 'wfc', 'colokan'],
+  study: ['belajar', 'study', 'quiet', 'senyap', 'wifi', 'coworking', 'wfc', 'colokan'],
+  meeting: ['meeting', 'rapat', 'wifi', 'coworking', 'indoor'],
+  rapat: ['meeting', 'rapat', 'wifi', 'coworking', 'indoor'],
+  nongkrong: ['nongkrong', 'santai', 'cozy', 'outdoor', 'nyaman', 'indoor', 'live music'],
+  hangout: ['nongkrong', 'santai', 'cozy', 'outdoor', 'nyaman', 'indoor', 'live music'],
+  kumpul: ['nongkrong', 'santai', 'cozy', 'outdoor', 'nyaman', 'indoor', 'live music'],
   santai: ['santai', 'relaxing', 'casual', 'homey'],
   relaxing: ['santai', 'relaxing', 'casual', 'homey'],
   senyap: ['senyap', 'quiet', 'calm', 'tenang'],
@@ -83,6 +87,12 @@ const localKeywordSynonyms: Record<string, string[]> = {
   rokok: ['smoking', 'rokok'],
   livemusic: ['livemusic', 'live music', 'musik'],
   musik: ['livemusic', 'live music', 'musik'],
+  nugas: ['wifi', 'coworking', 'quiet', 'work-friendly', 'nugas', 'tugas', 'kerja', 'wfc', 'colokan'],
+  tugas: ['wifi', 'coworking', 'quiet', 'work-friendly', 'nugas', 'tugas', 'kerja', 'wfc', 'colokan'],
+  kerja: ['wifi', 'coworking', 'quiet', 'work-friendly', 'nugas', 'tugas', 'kerja', 'wfc', 'colokan'],
+  'foto-foto': ['aesthetic', 'instagrammable', 'estetik', 'foto'],
+  foto: ['aesthetic', 'instagrammable', 'estetik', 'foto'],
+  kamera: ['aesthetic', 'instagrammable', 'estetik', 'foto'],
 }
 
 const expandLocalSearchTerms = (...terms: string[]) => {
@@ -92,15 +102,18 @@ const expandLocalSearchTerms = (...terms: string[]) => {
     .map((term) => term.trim().toLowerCase())
     .filter(Boolean)
     .forEach((term) => {
-      expanded.add(term)
+      const tokens = term.split(/\s+/)
+      const validTokens = tokens.filter((token) => token && !ignoredLocalTokens.has(token))
 
-      term
-        .split(/\s+/)
-        .filter((token) => token && !ignoredLocalTokens.has(token))
-        .forEach((token) => {
+      if (validTokens.length > 0) {
+        if (!ignoredLocalTokens.has(term)) {
+          expanded.add(term)
+        }
+        validTokens.forEach((token) => {
           expanded.add(token)
           localKeywordSynonyms[token]?.forEach((synonym) => expanded.add(synonym))
         })
+      }
 
       localKeywordSynonyms[term]?.forEach((synonym) => expanded.add(synonym))
     })
@@ -310,6 +323,13 @@ export async function GET(req: Request) {
         }
       })
     )).filter((result): result is CafeResult => result != null)
+
+    if (searchTerms.length > 0) {
+      fsqResults = fsqResults.filter((cafe) => {
+        const searchText = `${cafe.name || ''} ${cafe.address || ''}`.toLowerCase()
+        return searchTerms.some(term => searchText.includes(term.toLowerCase()))
+      })
+    }
 
     if (fsqResults.length === 0 && shouldSearchFoursquare) {
       const cachedFoursquareResults = await prisma.submission.findMany({
