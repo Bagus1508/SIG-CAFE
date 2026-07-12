@@ -147,9 +147,32 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const initialQ = params.get('q')
-    if (initialQ && cafes.length === 0) {
-      setQuery(initialQ)
-      handleSearch(initialQ)
+
+    try {
+      const cachedQuery = localStorage.getItem('lastSearchQuery')
+      const cachedCafes = localStorage.getItem('lastSearchCafes')
+
+      if (initialQ) {
+        setQuery(initialQ)
+        if (cachedQuery === initialQ && cachedCafes) {
+          setCafes(JSON.parse(cachedCafes))
+          return
+        }
+      } else if (cachedQuery && cachedCafes) {
+        setQuery(cachedQuery)
+        setCafes(JSON.parse(cachedCafes))
+        params.set('q', cachedQuery)
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+        return
+      }
+
+      if (initialQ && cafes.length === 0) {
+        handleSearch(initialQ)
+      }
+    } catch (e) {
+      if (initialQ && cafes.length === 0) {
+        handleSearch(initialQ)
+      }
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -262,6 +285,13 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
         ...item,
         isBestMatch: index === 0 && item.relevance > 0 // Only mark as best match if it has some relevance
       }))
+
+    try {
+      localStorage.setItem('lastSearchQuery', activeQuery)
+      localStorage.setItem('lastSearchCafes', JSON.stringify(normalized))
+    } catch (e) {
+      console.error('Failed to save search to local storage', e)
+    }
 
     setCafes(normalized)
     setSearching(false)
