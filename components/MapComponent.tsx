@@ -149,18 +149,25 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
     const initialQ = params.get('q')
 
     try {
-      const cachedQuery = localStorage.getItem('lastSearchQuery')
+      // Guard: clear oversized cache that could crash the page (>500KB)
       const cachedCafes = localStorage.getItem('lastSearchCafes')
+      if (cachedCafes && cachedCafes.length > 500_000) {
+        localStorage.removeItem('lastSearchCafes')
+        localStorage.removeItem('lastSearchQuery')
+      }
+
+      const cachedQuery = localStorage.getItem('lastSearchQuery')
+      const freshCafes = localStorage.getItem('lastSearchCafes')
 
       if (initialQ) {
         setQuery(initialQ)
-        if (cachedQuery === initialQ && cachedCafes) {
-          setCafes(JSON.parse(cachedCafes))
+        if (cachedQuery === initialQ && freshCafes) {
+          setCafes(JSON.parse(freshCafes))
           return
         }
-      } else if (cachedQuery && cachedCafes) {
+      } else if (cachedQuery && freshCafes) {
         setQuery(cachedQuery)
-        setCafes(JSON.parse(cachedCafes))
+        setCafes(JSON.parse(freshCafes))
         params.set('q', cachedQuery)
         router.replace(`${pathname}?${params.toString()}`, { scroll: false })
         return
@@ -170,6 +177,11 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
         handleSearch(initialQ)
       }
     } catch (e) {
+      // If localStorage is corrupt or inaccessible, clear it and move on
+      try {
+        localStorage.removeItem('lastSearchCafes')
+        localStorage.removeItem('lastSearchQuery')
+      } catch { /* ignore */ }
       if (initialQ && cafes.length === 0) {
         handleSearch(initialQ)
       }
@@ -287,10 +299,22 @@ export default function MapComponent({ dbCafes, keywordMapping }: MapComponentPr
       }))
 
     try {
+      // Limit to top 50 results to avoid localStorage QuotaExceededError
+      const toCache = normalized.slice(0, 50)
       localStorage.setItem('lastSearchQuery', activeQuery)
-      localStorage.setItem('lastSearchCafes', JSON.stringify(normalized))
+      localStorage.setItem('lastSearchCafes', JSON.stringify(toCache))
     } catch (e) {
-      console.error('Failed to save search to local storage', e)
+      // If quota is still exceeded, clear stale cache and try again with fewer items
+      try {
+        localStorage.removeItem('lastSearchCafes')
+        localStorage.removeItem('lastSearchQuery')
+        const toCache = normalized.slice(0, 20)
+        localStorage.setItem('lastSearchQuery', activeQuery)
+        localStorage.setItem('lastSearchCafes', JSON.stringify(toCache))
+      } catch {
+        // If still failing, just skip caching — don't crash the page
+        console.warn('localStorage quota exceeded, search results will not be cached.')
+      }
     }
 
     setCafes(normalized)
