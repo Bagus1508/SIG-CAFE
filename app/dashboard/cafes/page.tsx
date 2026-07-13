@@ -1,11 +1,12 @@
 "use client"
 import DashboardLayout from "@/components/DashboardLayout"
-import { Coffee, MapPin, Edit, Plus, Store, Search, Loader2, Trash2 } from "lucide-react"
+import { Coffee, MapPin, Edit, Plus, Store, Search, Loader2, Trash2, FileSpreadsheet } from "lucide-react"
 import { useState, useEffect } from "react"
 import { getApprovedCafes } from "./actions"
 import { deleteSubmission } from "../submissions/actions"
 import Link from "next/link"
 import ConfirmModal from "@/components/ConfirmModal"
+import ImportModal from "@/components/ImportModal"
 
 export default function CafeManagement() {
   const [cafes, setCafes] = useState<any[]>([])
@@ -15,6 +16,7 @@ export default function CafeManagement() {
     isOpen: false,
     id: null
   })
+  const [isImportOpen, setIsImportOpen] = useState(false)
 
   const loadData = async () => {
     setLoading(true)
@@ -52,12 +54,20 @@ export default function CafeManagement() {
           <h1 className="text-2xl font-bold text-slate-800">Manajemen Data Café</h1>
           <p className="text-slate-500 text-sm">Kelola informasi seluruh cabang café (Foursquare, Admin, & Owner)</p>
         </div>
-        <Link 
-          href="/dashboard/submissions/new"
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl shadow-lg shadow-blue-500/20 transition-all font-semibold"
-        >
-          <Plus size={18} /> Tambah Cabang Baru
-        </Link>
+        <div className="flex gap-3">
+          <button 
+            onClick={() => setIsImportOpen(true)}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl shadow-lg shadow-emerald-500/20 transition-all font-semibold cursor-pointer"
+          >
+            <FileSpreadsheet size={18} /> Import Excel / CSV
+          </button>
+          <Link 
+            href="/dashboard/submissions/new"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl shadow-lg shadow-blue-500/20 transition-all font-semibold"
+          >
+            <Plus size={18} /> Tambah Cabang Baru
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -155,6 +165,12 @@ export default function CafeManagement() {
         onCancel={() => setConfirmDelete({ isOpen: false, id: null })}
         confirmText="Ya, Hapus"
         type="danger"
+      />
+
+      <ImportModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        onSuccess={loadData}
       />
     </DashboardLayout>
   )

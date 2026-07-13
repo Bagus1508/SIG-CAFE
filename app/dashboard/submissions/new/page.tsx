@@ -83,7 +83,14 @@ function NewSubmissionFormContent() {
             openTime: (((data as any).openingHours || "").split(", ")[1] || "08:00 - 22:00").split(" - ")[0] || "08:00",
             closeTime: (((data as any).openingHours || "").split(", ")[1] || "08:00 - 22:00").split(" - ")[1] || "22:00",
             ambiance: (data as any).ambiance || "",
-            menuItems: JSON.parse((data as any).menuDescription || "[]"),
+            menuItems: (() => {
+              try {
+                const parsed = JSON.parse((data as any).menuDescription || "[]")
+                return Array.isArray(parsed) ? parsed : []
+              } catch {
+                return []
+              }
+            })(),
             description: (data as any).description || ""
           })
         }
